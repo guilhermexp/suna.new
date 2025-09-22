@@ -1,5 +1,6 @@
 from typing import Dict, List, Optional, Set
 from .ai_models import Model, ModelProvider, ModelCapability, ModelPricing
+from .provider_config import provider_config
 
 DEFAULT_FREE_MODEL = "Kimi K2"
 DEFAULT_PREMIUM_MODEL = "Claude Sonnet 4"
@@ -8,8 +9,17 @@ class ModelRegistry:
     def __init__(self):
         self._models: Dict[str, Model] = {}
         self._aliases: Dict[str, str] = {}
+        self._provider_config = provider_config
         self._initialize_models()
-    
+
+    def _should_enable_model(self, provider: ModelProvider) -> bool:
+        """Check if a model should be enabled based on provider configuration."""
+        return self._provider_config.is_provider_enabled(provider.value)
+
+    def _is_recommended_model(self, model_name: str) -> bool:
+        """Check if a model should be marked as recommended."""
+        return model_name == self._provider_config.recommended_model
+
     def _initialize_models(self):
         self.register(Model(
             id="anthropic/claude-sonnet-4-20250514",
@@ -29,8 +39,8 @@ class ModelRegistry:
             ),
             tier_availability=["paid"],
             priority=100,
-            recommended=True,
-            enabled=True
+            recommended=self._is_recommended_model("Claude Sonnet 4"),
+            enabled=self._should_enable_model(ModelProvider.ANTHROPIC)
         ))
         
         self.register(Model(
@@ -50,7 +60,7 @@ class ModelRegistry:
             ),
             tier_availability=["paid"],
             priority=99,
-            enabled=True
+            enabled=self._should_enable_model(ModelProvider.ANTHROPIC)
         ))
 
         self.register(Model(
@@ -69,7 +79,8 @@ class ModelRegistry:
             ),
             tier_availability=["paid"],
             priority=98,
-            enabled=True
+            recommended=self._is_recommended_model("Grok 4 Fast"),
+            enabled=self._should_enable_model(ModelProvider.XAI)
         ))        
         
         # self.register(Model(
@@ -110,7 +121,7 @@ class ModelRegistry:
             ),
             tier_availability=["paid"],
             priority=97,
-            enabled=True
+            enabled=self._should_enable_model(ModelProvider.OPENAI)
         ))
         
         self.register(Model(
@@ -130,7 +141,8 @@ class ModelRegistry:
             ),
             tier_availability=["free", "paid"],
             priority=96,
-            enabled=True
+            recommended=self._is_recommended_model("GPT-5 Mini"),
+            enabled=self._should_enable_model(ModelProvider.OPENAI)
         ))
         
         self.register(Model(
@@ -151,7 +163,8 @@ class ModelRegistry:
             ),
             tier_availability=["paid"],
             priority=95,
-            enabled=True
+            recommended=self._is_recommended_model("Gemini 2.5 Pro"),
+            enabled=self._should_enable_model(ModelProvider.GOOGLE)
         ))
         
         
@@ -171,7 +184,8 @@ class ModelRegistry:
             ),
             tier_availability=["free", "paid"],
             priority=94,
-            enabled=True
+            recommended=self._is_recommended_model("Kimi K2"),
+            enabled=self._should_enable_model(ModelProvider.MOONSHOTAI)
         ))
 
         """
