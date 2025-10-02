@@ -26,18 +26,9 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
 
     const trialStarted = searchParams?.get('trial') === 'started';
     const subscriptionSuccess = searchParams?.get('subscription') === 'success';
-    
-    console.log('🚀 Onboarding Provider - Checking trigger conditions:', {
-      trialStarted,
-      subscriptionSuccess,
-      subscription: subscription,
-      shouldTrigger: shouldTriggerOnboarding(subscription)
-    });
-    
+
     if ((trialStarted || subscriptionSuccess) && shouldTriggerOnboarding(subscription)) {
-      console.log('✅ Triggering post-subscription onboarding');
       if (triggerPostSubscriptionOnboarding()) {
-        console.log('🎯 Starting onboarding with default steps');
         startOnboarding(onboardingSteps);
       }
     }
