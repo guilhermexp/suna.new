@@ -29,10 +29,9 @@ redis_broker = RedisBroker(host=redis_host, port=redis_port, middleware=[dramati
 
 dramatiq.set_broker(redis_broker)
 
-
 _initialized = False
 db = DBConnection()
-instance_id = "single"
+instance_id = ""
 
 async def initialize():
     """Initialize the agent API with resources from the main API."""
@@ -59,11 +58,6 @@ async def run_agent_background(
     instance_id: str,
     project_id: str,
     model_name: str = "openai/gpt-5-mini",
-    enable_thinking: Optional[bool] = False,
-    reasoning_effort: Optional[str] = 'low',
-    stream: bool = True,
-    enable_context_manager: bool = True,
-    enable_prompt_caching: bool = False,
     agent_config: Optional[dict] = None,
     request_id: Optional[str] = None
 ):
@@ -103,36 +97,13 @@ async def run_agent_background(
     sentry.sentry.set_tag("thread_id", thread_id)
 
     logger.info(f"Starting background agent run: {agent_run_id} for thread: {thread_id} (Instance: {instance_id})")
-    # logger.debug({
-    #     "model_name": model_name,
-    #     "enable_thinking": enable_thinking,
-    #     "reasoning_effort": reasoning_effort,
-    #     "stream": stream,
-    #     "enable_context_manager": enable_context_manager,
-    #     "agent_config": agent_config,
-    # })
     
     from core.ai_models import model_manager
 
     effective_model = model_manager.resolve_model_id(model_name)
     
-    # is_tier_default = model_name in ["Kimi K2", "Claude Sonnet 4", "openai/gpt-5-mini"]
+    logger.info(f"🚀 Using model: {effective_model}")
     
-    # if is_tier_default and agent_config and agent_config.get('model'):
-    #     agent_model = agent_config['model']
-    #     effective_model = model_manager.resolve_model_id(agent_model)
-    #     logger.debug(f"Using model from agent config: {agent_model} -> {effective_model} (tier default was {model_name})")
-    # else:
-    #     effective_model = model_manager.resolve_model_id(model_name)
-    #     if not is_tier_default:
-    #         logger.debug(f"Using user-selected model: {model_name} -> {effective_model}")
-    #     else:
-    #         logger.debug(f"Using tier default model: {model_name} -> {effective_model}")
-
-    logger.info(f"🚀 Using model: {effective_model} (thinking: {enable_thinking}, reasoning_effort: {reasoning_effort})")
-    # if agent_config:
-    #     logger.debug(f"Using custom agent: {agent_config.get('name', 'Unknown')}")
-
     client = await db.client
     start_time = datetime.now(timezone.utc)
     total_responses = 0
@@ -172,6 +143,7 @@ async def run_agent_background(
             stop_signal_received = True # Stop the run if the checker fails
 
     trace = langfuse.trace(name="agent_run", id=agent_run_id, session_id=thread_id, metadata={"project_id": project_id, "instance_id": instance_id})
+
     try:
         # Setup Pub/Sub listener for control signals
         pubsub = await redis.create_pubsub()
@@ -187,14 +159,10 @@ async def run_agent_background(
         # Ensure active run key exists and has TTL
         await redis.set(instance_active_key, "running", ex=redis.REDIS_KEY_TTL)
 
-
         # Initialize agent generator
         agent_gen = run_agent(
-            thread_id=thread_id, project_id=project_id, stream=stream,
+            thread_id=thread_id, project_id=project_id,
             model_name=effective_model,
-            enable_thinking=enable_thinking, reasoning_effort=reasoning_effort,
-            enable_context_manager=enable_context_manager,
-            enable_prompt_caching=enable_prompt_caching,
             agent_config=agent_config,
             trace=trace,
         )
@@ -271,15 +239,6 @@ async def run_agent_background(
             await redis.publish(response_channel, "new")
         except Exception as redis_err:
              logger.error(f"Failed to push error response to Redis for {agent_run_id}: {redis_err}")
-
-        # Fetch final responses (including the error)
-        all_responses = []
-        try:
-             all_responses_json = await redis.lrange(response_list_key, 0, -1)
-             all_responses = [json.loads(r) for r in all_responses_json]
-        except Exception as fetch_err:
-             logger.error(f"Failed to fetch responses from Redis after error for {agent_run_id}: {fetch_err}")
-             all_responses = [error_response] # Use the error message we tried to push
 
         # Update DB status
         await update_agent_run_status(client, agent_run_id, "failed", error=f"{error_message}\n{traceback_str}")
@@ -378,8 +337,6 @@ async def update_agent_run_status(
 
         if error:
             update_data["error"] = error
-
-
 
         # Retry up to 3 times
         for retry in range(3):

@@ -12,7 +12,10 @@ from .config import (
     TIERS, 
     TRIAL_DURATION_DAYS,
     TRIAL_CREDITS,
-    get_tier_by_name
+    get_tier_by_name,
+    is_commitment_price_id,
+    get_commitment_duration_months,
+    get_price_type
 )
 from .credit_manager import credit_manager
 
@@ -198,7 +201,7 @@ class SubscriptionService:
             'trial_ends_at': None
         }
 
-    async def create_checkout_session(self, account_id: str, price_id: str, success_url: str, cancel_url: str) -> Dict:
+    async def create_checkout_session(self, account_id: str, price_id: str, success_url: str, cancel_url: str, commitment_type: Optional[str] = None) -> Dict:
         customer_id = await self.get_or_create_stripe_customer(account_id)
         
         db = DBConnection()
@@ -244,7 +247,8 @@ class SubscriptionService:
                         'account_id': account_id,
                         'account_type': 'personal',
                         'converting_from_trial': 'true',
-                        'previous_tier': current_tier or 'trial'
+                        'previous_tier': current_tier or 'trial',
+                        'commitment_type': commitment_type or 'none'
                     }
                 }
             )
@@ -311,7 +315,8 @@ class SubscriptionService:
                 subscription_data={
                     'metadata': {
                         'account_id': account_id,
-                        'account_type': 'personal'
+                        'account_type': 'personal',
+                        'commitment_type': commitment_type or 'none'
                     }
                 }
             )
@@ -363,13 +368,28 @@ class SubscriptionService:
         client = await db.client
         
         credit_result = await client.from_('credit_accounts').select(
-            'stripe_subscription_id'
+            'stripe_subscription_id, commitment_type, commitment_end_date'
         ).eq('account_id', account_id).execute()
         
         if not credit_result.data or not credit_result.data[0].get('stripe_subscription_id'):
             raise HTTPException(status_code=404, detail="No subscription found")
         
         subscription_id = credit_result.data[0]['stripe_subscription_id']
+        commitment_type = credit_result.data[0].get('commitment_type')
+        commitment_end_date = credit_result.data[0].get('commitment_end_date')
+        
+        # Check if user is in a commitment period
+        if commitment_type and commitment_end_date:
+            end_date = datetime.fromisoformat(commitment_end_date.replace('Z', '+00:00'))
+            if datetime.now(timezone.utc) < end_date:
+                months_remaining = (end_date.year - datetime.now(timezone.utc).year) * 12 + \
+                                 (end_date.month - datetime.now(timezone.utc).month)
+                
+                raise HTTPException(
+                    status_code=403, 
+                    detail=f"Cannot cancel during commitment period. Your commitment ends on {end_date.date()}. "
+                           f"You have {months_remaining} months remaining in your commitment."
+                )
         
         try:
             subscription = await stripe.Subscription.modify_async(
@@ -377,6 +397,18 @@ class SubscriptionService:
                 cancel_at_period_end=True,
                 metadata={'cancellation_feedback': feedback} if feedback else {}
             )
+            
+            # Log cancellation in commitment history if applicable
+            if commitment_type:
+                await client.from_('commitment_history').insert({
+                    'account_id': account_id,
+                    'commitment_type': commitment_type,
+                    'start_date': credit_result.data[0].get('commitment_start_date'),
+                    'end_date': commitment_end_date,
+                    'stripe_subscription_id': subscription_id,
+                    'cancelled_at': datetime.now(timezone.utc).isoformat(),
+                    'cancellation_reason': feedback or 'User cancelled'
+                }).execute()
             
             return {
                 'success': True,
@@ -417,7 +449,7 @@ class SubscriptionService:
             logger.error(f"Error reactivating subscription {subscription_id}: {e}")
             raise HTTPException(status_code=500, detail=f"Stripe error: {str(e)}")
 
-    async def handle_subscription_change(self, subscription: Dict):
+    async def handle_subscription_change(self, subscription: Dict, previous_attributes: Dict = None):
         db = DBConnection()
         client = await db.client
         
@@ -432,6 +464,18 @@ class SubscriptionService:
             
             account_id = customer_result.data[0]['account_id']
         price_id = subscription['items']['data'][0]['price']['id'] if subscription.get('items') else None
+        
+
+        is_renewal = False
+        if previous_attributes and previous_attributes.get('current_period_start') and previous_attributes.get('current_period_end'):
+            prev_period_start = previous_attributes.get('current_period_start')
+            current_period_start = subscription.get('current_period_start')
+            
+            if prev_period_start and current_period_start and prev_period_start != current_period_start:
+                is_renewal = True
+                logger.info(f"[RENEWAL DETECTION] Subscription {subscription['id']} renewal detected - period start changed from {prev_period_start} to {current_period_start}")
+        
+        await self._track_commitment_if_needed(account_id, price_id, subscription, client)
         
         new_tier_info = get_tier_by_price_id(price_id)
         if not new_tier_info:
@@ -484,7 +528,7 @@ class SubscriptionService:
                 'credits': 0
             }
             
-            should_grant_credits = self._should_grant_credits(current_tier_name, current_tier, new_tier, subscription, old_subscription_id)
+            should_grant_credits = self._should_grant_credits(current_tier_name, current_tier, new_tier, subscription, old_subscription_id, is_renewal)
             
             if should_grant_credits:
                 await client.from_('credit_accounts').update({
@@ -542,10 +586,13 @@ class SubscriptionService:
         
         logger.info(f"[WEBHOOK] Started trial for user {account_id} via Stripe subscription - granted ${TRIAL_CREDITS} credits")
 
-    def _should_grant_credits(self, current_tier_name, current_tier, new_tier, subscription, old_subscription_id):
+    def _should_grant_credits(self, current_tier_name, current_tier, new_tier, subscription, old_subscription_id, is_renewal=False):
         should_grant_credits = False
-        
-        if current_tier_name in ['free', 'none'] and new_tier['name'] not in ['free', 'none']:
+
+        if is_renewal:
+            should_grant_credits = True
+            logger.info(f"Renewal detected for tier {new_tier['name']} - will grant credits")
+        elif current_tier_name in ['free', 'none'] and new_tier['name'] not in ['free', 'none']:
             should_grant_credits = True
             logger.info(f"Upgrade from free tier to {new_tier['name']} - will grant credits")
         elif current_tier:
@@ -684,6 +731,92 @@ class SubscriptionService:
         except Exception as e:
             logger.error(f"[ALLOWED_MODELS] Error getting allowed models for user {user_id}: {e}")
             return []
+
+    async def _track_commitment_if_needed(self, account_id: str, price_id: str, subscription: Dict, client):
+        if not is_commitment_price_id(price_id):
+            return
+        
+        commitment_duration = get_commitment_duration_months(price_id)
+        if commitment_duration == 0:
+            return
+        
+        existing_commitment = await client.from_('commitment_history').select('id').eq('stripe_subscription_id', subscription['id']).execute()
+        if existing_commitment.data:
+            logger.info(f"[COMMITMENT] Commitment already tracked for subscription {subscription['id']}, skipping")
+            return
+        
+        start_date = datetime.fromtimestamp(subscription['current_period_start'], tz=timezone.utc)
+        end_date = start_date + timedelta(days=commitment_duration * 30)
+        
+        await client.from_('credit_accounts').update({
+            'commitment_type': 'yearly_commitment',
+            'commitment_start_date': start_date.isoformat(),
+            'commitment_end_date': end_date.isoformat(),
+            'commitment_price_id': price_id,
+            'can_cancel_after': end_date.isoformat()
+        }).eq('account_id', account_id).execute()
+        
+        # Insert commitment history record
+        await client.from_('commitment_history').insert({
+            'account_id': account_id,
+            'commitment_type': 'yearly_commitment',
+            'price_id': price_id,
+            'start_date': start_date.isoformat(),
+            'end_date': end_date.isoformat(),
+            'stripe_subscription_id': subscription['id']
+        }).execute()
+        
+        logger.info(f"[COMMITMENT] Tracked yearly commitment for account {account_id}, subscription {subscription['id']}, ends {end_date.date()}")
+    
+    async def get_commitment_status(self, account_id: str) -> Dict:
+        """Get the commitment status for an account"""
+        db = DBConnection()
+        client = await db.client
+        
+        result = await client.from_('credit_accounts').select(
+            'commitment_type, commitment_start_date, commitment_end_date, commitment_price_id'
+        ).eq('account_id', account_id).execute()
+        
+        if not result.data or not result.data[0].get('commitment_type'):
+            return {
+                'has_commitment': False,
+                'can_cancel': True,
+                'commitment_type': None,
+                'months_remaining': None,
+                'commitment_end_date': None
+            }
+        
+        data = result.data[0]
+        end_date = datetime.fromisoformat(data['commitment_end_date'].replace('Z', '+00:00'))
+        now = datetime.now(timezone.utc)
+        
+        if now >= end_date:
+            # Commitment has expired, clear it
+            await client.from_('credit_accounts').update({
+                'commitment_type': None,
+                'commitment_start_date': None,
+                'commitment_end_date': None,
+                'commitment_price_id': None,
+                'can_cancel_after': None
+            }).eq('account_id', account_id).execute()
+            
+            return {
+                'has_commitment': False,
+                'can_cancel': True,
+                'commitment_type': None,
+                'months_remaining': None,
+                'commitment_end_date': None
+            }
+        
+        months_remaining = (end_date.year - now.year) * 12 + (end_date.month - now.month)
+        
+        return {
+            'has_commitment': True,
+            'can_cancel': False,
+            'commitment_type': data['commitment_type'],
+            'months_remaining': max(1, months_remaining),
+            'commitment_end_date': data['commitment_end_date']
+        }
 
 
 subscription_service = SubscriptionService()

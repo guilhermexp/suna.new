@@ -118,7 +118,7 @@ export function SidebarLeft({
             data.user.email?.split('@')[0] ||
             'User',
           email: data.user.email || '',
-          avatar: data.user.user_metadata?.avatar_url || '',
+          avatar: data.user.user_metadata?.avatar_url || '', // User avatar (different from agent avatar)
           isAdmin: isAdmin,
         });
       }
@@ -194,10 +194,10 @@ export function SidebarLeft({
               </span>
             </SidebarMenuButton>
           </Link>
-          <Link href="/tasks">
+          <Link href="/triggers">
             <SidebarMenuButton
               className={cn('touch-manipulation mt-1', {
-                'bg-accent text-accent-foreground font-medium': pathname === '/tasks',
+                'bg-accent text-accent-foreground font-medium': pathname === '/triggers',
               })}
               onClick={() => {
                 if (isMobile) setOpenMobile(false);
@@ -205,7 +205,7 @@ export function SidebarLeft({
             >
               <Zap className="h-4 w-4 mr-1" />
               <span className="flex items-center justify-between w-full">
-                Tasks
+                Triggers
               </span>
             </SidebarMenuButton>
           </Link>

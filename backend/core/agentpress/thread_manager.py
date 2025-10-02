@@ -122,22 +122,39 @@ class ThreadManager:
         """Handle billing for LLM usage."""
         try:
             usage = content.get("usage", {})
+            
+            # DEBUG: Log the complete usage object to see what data we have
+            # logger.info(f"🔍 THREAD MANAGER USAGE: {usage}")
+            # logger.info(f"🔍 THREAD MANAGER CONTENT: {content}")
+            
             prompt_tokens = int(usage.get("prompt_tokens", 0) or 0)
             completion_tokens = int(usage.get("completion_tokens", 0) or 0)
+            
+            # Try cache_read_input_tokens first (Anthropic standard), then fallback to prompt_tokens_details.cached_tokens
             cache_read_tokens = int(usage.get("cache_read_input_tokens", 0) or 0)
+            if cache_read_tokens == 0:
+                cache_read_tokens = int(usage.get("prompt_tokens_details", {}).get("cached_tokens", 0) or 0)
+            
             cache_creation_tokens = int(usage.get("cache_creation_input_tokens", 0) or 0)
             model = content.get("model")
             
-            # logger.debug(f"Processing billing: model='{model}', tokens={prompt_tokens}+{completion_tokens}")
+            # DEBUG: Log what we detected
+            logger.info(f"🔍 CACHE DETECTION: cache_read={cache_read_tokens}, cache_creation={cache_creation_tokens}, prompt={prompt_tokens}")
             
             client = await self.db.client
             thread_row = await client.table('threads').select('account_id').eq('thread_id', thread_id).limit(1).execute()
             user_id = thread_row.data[0]['account_id'] if thread_row.data and len(thread_row.data) > 0 else None
             
             if user_id and (prompt_tokens > 0 or completion_tokens > 0):
+
                 if cache_read_tokens > 0:
-                    logger.info(f"🎯 Using cached tokens! cache_read={cache_read_tokens} of {prompt_tokens} total")
-                
+                    cache_hit_percentage = (cache_read_tokens / prompt_tokens * 100) if prompt_tokens > 0 else 0
+                    logger.info(f"🎯 CACHE HIT: {cache_read_tokens}/{prompt_tokens} tokens ({cache_hit_percentage:.1f}%)")
+                elif cache_creation_tokens > 0:
+                    logger.info(f"💾 CACHE WRITE: {cache_creation_tokens} tokens stored for future use")
+                else:
+                    logger.debug(f"❌ NO CACHE: All {prompt_tokens} tokens processed fresh")
+
                 deduct_result = await billing_integration.deduct_usage(
                     account_id=user_id,
                     prompt_tokens=prompt_tokens,
@@ -212,17 +229,10 @@ class ThreadManager:
         tool_choice: ToolChoice = "auto",
         native_max_auto_continues: int = 25,
         max_xml_tool_calls: int = 0,
-        enable_thinking: Optional[bool] = False,
-        reasoning_effort: Optional[str] = 'low',
         generation: Optional[StatefulGenerationClient] = None,
-        enable_prompt_caching: bool = False,
-        enable_context_manager: Optional[bool] = None,
     ) -> Union[Dict[str, Any], AsyncGenerator]:
         """Run a conversation thread with LLM integration and tool execution."""
         logger.debug(f"🚀 Starting thread execution for {thread_id} with model {llm_model}")
-
-        # Determine if context manager should be used (default to True)
-        use_context_manager = enable_context_manager if enable_context_manager is not None else True
 
         # Ensure we have a valid ProcessorConfig object
         if processor_config is None:
@@ -246,9 +256,8 @@ class ThreadManager:
         if native_max_auto_continues == 0:
             result = await self._execute_run(
                 thread_id, system_prompt, llm_model, llm_temperature, llm_max_tokens,
-                tool_choice, config, stream, enable_thinking, reasoning_effort,
-                generation, auto_continue_state, temporary_message, enable_prompt_caching,
-                use_context_manager
+                tool_choice, config, stream,
+                generation, auto_continue_state, temporary_message
             )
             
             # If result is an error dict, convert it to a generator that yields the error
@@ -260,21 +269,18 @@ class ThreadManager:
         # Auto-continue execution
         return self._auto_continue_generator(
             thread_id, system_prompt, llm_model, llm_temperature, llm_max_tokens,
-            tool_choice, config, stream, enable_thinking, reasoning_effort,
+            tool_choice, config, stream,
             generation, auto_continue_state, temporary_message,
-            native_max_auto_continues, enable_prompt_caching, use_context_manager
+            native_max_auto_continues
         )
 
     async def _execute_run(
         self, thread_id: str, system_prompt: Dict[str, Any], llm_model: str,
         llm_temperature: float, llm_max_tokens: Optional[int], tool_choice: ToolChoice,
-        config: ProcessorConfig, stream: bool, enable_thinking: Optional[bool],
-        reasoning_effort: Optional[str], generation: Optional[StatefulGenerationClient],
-        auto_continue_state: Dict[str, Any], temporary_message: Optional[Dict[str, Any]] = None,
-        enable_prompt_caching: bool = False, use_context_manager: bool = True
+        config: ProcessorConfig, stream: bool, generation: Optional[StatefulGenerationClient],
+        auto_continue_state: Dict[str, Any], temporary_message: Optional[Dict[str, Any]] = None
     ) -> Union[Dict[str, Any], AsyncGenerator]:
         """Execute a single LLM run."""
-        logger.debug(f"_execute_run called with config type: {type(config)}")
         
         # CRITICAL: Ensure config is always a ProcessorConfig object
         if not isinstance(config, ProcessorConfig):
@@ -290,8 +296,13 @@ class ThreadManager:
                 partial_content = auto_continue_state['continuous_state']['accumulated_content']
                 messages.append({"role": "assistant", "content": partial_content})
 
-            # Apply context compression if enabled
-            if use_context_manager:
+            # ===== CENTRAL CONFIGURATION =====
+            ENABLE_CONTEXT_MANAGER = True   # Set to False to disable context compression
+            ENABLE_PROMPT_CACHING = True    # Set to False to disable prompt caching
+            # ==================================
+
+            # Apply context compression
+            if ENABLE_CONTEXT_MANAGER:
                 logger.debug(f"Context manager enabled, compressing {len(messages)} messages")
                 context_manager = ContextManager()
                 compressed_messages = context_manager.compress_messages(
@@ -302,8 +313,8 @@ class ThreadManager:
             else:
                 logger.debug("Context manager disabled, using raw messages")
 
-            # Apply caching if enabled
-            if enable_prompt_caching:
+            # Apply caching
+            if ENABLE_PROMPT_CACHING:
                 prepared_messages = apply_anthropic_caching_strategy(system_prompt, messages, llm_model)
                 prepared_messages = validate_cache_blocks(prepared_messages, llm_model)
             else:
@@ -322,8 +333,6 @@ class ThreadManager:
                         model_parameters={
                             "max_tokens": llm_max_tokens,
                             "temperature": llm_temperature,
-                            "enable_thinking": enable_thinking,
-                            "reasoning_effort": reasoning_effort,
                             "tool_choice": tool_choice,
                             "tools": openapi_tool_schemas,
                         }
@@ -339,9 +348,7 @@ class ThreadManager:
                     max_tokens=llm_max_tokens,
                     tools=openapi_tool_schemas,
                     tool_choice=tool_choice if config.native_tool_calling else "none",
-                    stream=stream,
-                    enable_thinking=enable_thinking,
-                    reasoning_effort=reasoning_effort
+                    stream=stream
                 )
             except LLMError as e:
                 return {"type": "status", "status": "error", "message": str(e)}
@@ -351,10 +358,10 @@ class ThreadManager:
                 return llm_response
 
             # Process response - ensure config is ProcessorConfig object
-            logger.debug(f"Config type before response processing: {type(config)}")
-            if not isinstance(config, ProcessorConfig):
-                logger.error(f"Config is not ProcessorConfig! Type: {type(config)}, Value: {config}")
-                config = ProcessorConfig()  # Fallback
+            # logger.debug(f"Config type before response processing: {type(config)}")
+            # if not isinstance(config, ProcessorConfig):
+            #     logger.error(f"Config is not ProcessorConfig! Type: {type(config)}, Value: {config}")
+            #     config = ProcessorConfig()  # Fallback
                 
             if stream and hasattr(llm_response, '__aiter__'):
                 return self.response_processor.process_streaming_response(
@@ -376,15 +383,13 @@ class ThreadManager:
     async def _auto_continue_generator(
         self, thread_id: str, system_prompt: Dict[str, Any], llm_model: str,
         llm_temperature: float, llm_max_tokens: Optional[int], tool_choice: ToolChoice,
-        config: ProcessorConfig, stream: bool, enable_thinking: Optional[bool],
-        reasoning_effort: Optional[str], generation: Optional[StatefulGenerationClient],
+        config: ProcessorConfig, stream: bool, generation: Optional[StatefulGenerationClient],
         auto_continue_state: Dict[str, Any], temporary_message: Optional[Dict[str, Any]],
-        native_max_auto_continues: int, enable_prompt_caching: bool = False,
-        use_context_manager: bool = True
+        native_max_auto_continues: int
     ) -> AsyncGenerator:
         """Generator that handles auto-continue logic."""
         logger.debug(f"Starting auto-continue generator, max: {native_max_auto_continues}")
-        logger.debug(f"Config type in auto-continue generator: {type(config)}")
+        # logger.debug(f"Config type in auto-continue generator: {type(config)}")
         
         # Ensure config is valid ProcessorConfig
         if not isinstance(config, ProcessorConfig):
@@ -397,10 +402,9 @@ class ThreadManager:
             try:
                 response_gen = await self._execute_run(
                     thread_id, system_prompt, llm_model, llm_temperature, llm_max_tokens,
-                    tool_choice, config, stream, enable_thinking, reasoning_effort,
+                    tool_choice, config, stream,
                     generation, auto_continue_state,
-                    temporary_message if auto_continue_state['count'] == 0 else None,
-                    enable_prompt_caching, use_context_manager
+                    temporary_message if auto_continue_state['count'] == 0 else None
                 )
 
                 # Handle error responses

@@ -30,6 +30,7 @@ class CreateCheckoutSessionRequest(BaseModel):
     price_id: str
     success_url: str
     cancel_url: str
+    commitment_type: Optional[str] = None
 
 class CreatePortalSessionRequest(BaseModel):
     return_url: str
@@ -77,8 +78,6 @@ def calculate_token_cost(prompt_tokens: int, completion_tokens: int, model: str)
     except Exception as e:
         logger.error(f"[COST_CALC] Error calculating token cost for model '{model}': {e}")
         return Decimal('0.01')
-
-
 
 async def calculate_credit_breakdown(account_id: str, client) -> Dict:
     current_balance = await credit_service.get_balance(account_id)
@@ -443,8 +442,9 @@ async def create_checkout_session(
         result = await subscription_service.create_checkout_session(
             account_id=account_id,
             price_id=request.price_id,
-                success_url=request.success_url,
-            cancel_url=request.cancel_url
+            success_url=request.success_url,
+            cancel_url=request.cancel_url,
+            commitment_type=request.commitment_type
         )
         return result
             
@@ -822,13 +822,22 @@ async def get_subscription_commitment(
     subscription_id: str,
     account_id: str = Depends(verify_and_get_user_id_from_jwt)
 ) -> Dict:
-    return {
-        'has_commitment': False,
-        'can_cancel': True,
-        'commitment_type': None,
-        'months_remaining': None,
-        'commitment_end_date': None
-    }
+    try:
+        commitment_status = await subscription_service.get_commitment_status(account_id)
+        if commitment_status['has_commitment']:
+            logger.info(f"[COMMITMENT] Account {account_id} has active commitment, {commitment_status['months_remaining']} months remaining")
+        
+        return commitment_status
+        
+    except Exception as e:
+        logger.error(f"Error checking commitment status for account {account_id}: {e}")
+        return {
+            'has_commitment': False,
+            'can_cancel': True,
+            'commitment_type': None,
+            'months_remaining': None,
+            'commitment_end_date': None
+        }
 
 @router.get("/trial/status")
 async def get_trial_status(
