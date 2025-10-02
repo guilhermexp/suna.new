@@ -19,6 +19,10 @@ function applyEnvFallbacks() {
   if (!process.env.NEXT_PUBLIC_URL && process.env.APP_URL) {
     process.env.NEXT_PUBLIC_URL = process.env.APP_URL;
   }
+
+  if (!process.env.NEXT_PUBLIC_ENV_MODE && process.env.ENV_MODE) {
+    process.env.NEXT_PUBLIC_ENV_MODE = process.env.ENV_MODE.toUpperCase();
+  }
 }
 
 applyEnvFallbacks();
