@@ -172,7 +172,17 @@ export const getAgents = async (params: AgentsParams = {}): Promise<AgentsRespon
     if (!session) {
       // Return empty data when not authenticated instead of throwing error
       // This prevents errors on public pages like homepage
-      return { agents: [], total: 0, page: 1, limit: params.limit || 10 };
+      return {
+        agents: [],
+        pagination: {
+          current_page: 1,
+          page_size: params.limit || 10,
+          total_items: 0,
+          total_pages: 0,
+          has_next: false,
+          has_previous: false,
+        },
+      };
     }
 
     const queryParams = new URLSearchParams();
