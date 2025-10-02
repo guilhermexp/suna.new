@@ -109,12 +109,17 @@ if enabled:
             
             class MockTrace:
                 def __init__(self): self.id = "mock-trace-id"
+                def update(self, **kwargs): pass
+                def span(self, **kwargs): return MockSpan()
+                def generation(self, **kwargs): return MockGeneration()
+                def end(self, **kwargs): pass
             class MockGeneration:
                 def __init__(self): self.id = "mock-generation-id"
                 def update(self, **kwargs): pass
                 def end(self, **kwargs): pass
             class MockSpan:
                 def __init__(self): self.id = "mock-span-id"
+                def update(self, **kwargs): pass
                 def end(self, **kwargs): pass
             
             langfuse = MockLangfuse()
@@ -135,12 +140,17 @@ else:
     
     class MockTrace:
         def __init__(self): self.id = "mock-trace-id"
+        def update(self, **kwargs): pass
+        def span(self, **kwargs): return MockSpan()
+        def generation(self, **kwargs): return MockGeneration()
+        def end(self, **kwargs): pass
     class MockGeneration:
         def __init__(self): self.id = "mock-generation-id"
         def update(self, **kwargs): pass
         def end(self, **kwargs): pass
     class MockSpan:
         def __init__(self): self.id = "mock-span-id"
+        def update(self, **kwargs): pass
         def end(self, **kwargs): pass
     
     langfuse = MockLangfuse()
