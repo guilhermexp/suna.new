@@ -76,7 +76,7 @@ export const siteConfig = {
       { id: 2, name: 'Process', href: '#process' },
       // { id: 3, name: 'Use Cases', href: '#use-cases' },
       { id: 4, name: 'Open Source', href: '#open-source' },
-      { id: 5, name: 'Pricing', href: '#pricing' },
+      // { id: 5, name: 'Pricing', href: '#pricing' },
       { id: 6, name: 'Enterprise', href: '/enterprise' },
     ],
   },
