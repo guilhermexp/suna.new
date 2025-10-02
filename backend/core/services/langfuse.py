@@ -112,6 +112,7 @@ if enabled:
                 def update(self, **kwargs): pass
                 def span(self, **kwargs): return MockSpan()
                 def generation(self, **kwargs): return MockGeneration()
+                def event(self, **kwargs): pass
                 def end(self, **kwargs): pass
             class MockGeneration:
                 def __init__(self): self.id = "mock-generation-id"
@@ -143,6 +144,7 @@ else:
         def update(self, **kwargs): pass
         def span(self, **kwargs): return MockSpan()
         def generation(self, **kwargs): return MockGeneration()
+        def event(self, **kwargs): pass
         def end(self, **kwargs): pass
     class MockGeneration:
         def __init__(self): self.id = "mock-generation-id"
