@@ -310,13 +310,9 @@ export const getProjects = async (): Promise<Project[]> => {
 
     // Get the current user's ID to filter projects
     const { data: userData, error: userError } = await supabase.auth.getUser();
-    if (userError) {
-      console.error('Error getting current user:', userError);
-      return [];
-    }
-
-    // If no user is logged in, return an empty array
-    if (!userData.user) {
+    if (userError || !userData.user) {
+      // Return empty array silently when not authenticated
+      // This prevents errors on public pages like login
       return [];
     }
 
@@ -577,13 +573,9 @@ export const getThreads = async (projectId?: string): Promise<Thread[]> => {
 
   // Get the current user's ID to filter threads
   const { data: userData, error: userError } = await supabase.auth.getUser();
-  if (userError) {
-    console.error('Error getting current user:', userError);
-    return [];
-  }
-
-  // If no user is logged in, return an empty array
-  if (!userData.user) {
+  if (userError || !userData.user) {
+    // Return empty array silently when not authenticated
+    // This prevents errors on public pages like login
     return [];
   }
 
