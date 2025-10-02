@@ -170,7 +170,9 @@ export const getAgents = async (params: AgentsParams = {}): Promise<AgentsRespon
     const { data: { session } } = await supabase.auth.getSession();
 
     if (!session) {
-      throw new Error('You must be logged in to get agents');
+      // Return empty data when not authenticated instead of throwing error
+      // This prevents errors on public pages like homepage
+      return { agents: [], total: 0, page: 1, limit: params.limit || 10 };
     }
 
     const queryParams = new URLSearchParams();
