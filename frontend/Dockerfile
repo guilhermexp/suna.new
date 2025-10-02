@@ -69,12 +69,11 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 USER nextjs
 
-# Railway will set the PORT environment variable
-# Don't hardcode the PORT value
-EXPOSE 8080
+# Railway automatically sets PORT environment variable
+EXPOSE 3000
 
 # server.js is created by next build from the standalone output
 # https://nextjs.org/docs/pages/api-reference/config/next-config-js/output
 ENV HOSTNAME="0.0.0.0"
-ENV PORT=8080
+# The PORT will be set by Railway at runtime
 CMD ["node", "server.js"]
