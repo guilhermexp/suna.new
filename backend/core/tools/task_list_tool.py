@@ -267,16 +267,25 @@ class TaskListTool(SandboxToolsBase):
     )
     async def create_tasks(self, sections: Optional[List[Dict[str, Any]]] = None,
                           section_title: Optional[str] = None, section_id: Optional[str] = None,
-                          task_contents: Optional[List[str]] = None) -> ToolResult:
+                          task_contents: Optional[List[str]] = None,
+                          # Fallback parameters for Gemini Flash compatibility
+                          title: Optional[str] = None,
+                          tasks: Optional[List[str]] = None) -> ToolResult:
         """Create tasks - supports both batch multi-section and single section creation"""
         try:
+            # FALLBACK: Convert Gemini Flash format (title + tasks) to correct format
+            # This only activates when model passes parameters incorrectly
+            if title and tasks and not sections:
+                logger.debug(f"Converting Gemini Flash format: title={title}, tasks={len(tasks)} items")
+                sections = [{"title": title, "tasks": tasks}]
+
             existing_sections, existing_tasks = await self._load_data()
             section_map = {s.id: s for s in existing_sections}
             title_map = {s.title.lower(): s for s in existing_sections}
-            
+
             created_tasks = 0
             created_sections = 0
-            
+
             if sections:
                 # Batch creation across multiple sections
                 for section_data in sections:

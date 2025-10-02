@@ -47,8 +47,10 @@ class XMLToolParser:
         re.DOTALL | re.IGNORECASE
     )
     
+    # Updated pattern to handle nested content and avoid premature closure
+    # This pattern uses a more sophisticated approach to match the full parameter content
     PARAMETER_PATTERN = re.compile(
-        r'<parameter\s+name=["\']([^"\']+)["\']>(.*?)</parameter>',
+        r'<parameter\s+name=["\']([^"\']+)["\']>((?:(?!<parameter\s).)*?)</parameter>',
         re.DOTALL | re.IGNORECASE
     )
     

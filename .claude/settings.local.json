@@ -3,7 +3,9 @@
     "allow": [
       "mcp__railway-mcp__project_create",
       "mcp__railway-mcp__project_info",
-      "mcp__railway-mcp__database_list_types"
+      "mcp__railway-mcp__database_list_types",
+      "Bash(docker logs:*)",
+      "Bash(docker exec:*)"
     ]
   },
   "enabledMcpjsonServers": [

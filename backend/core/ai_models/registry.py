@@ -46,7 +46,7 @@ class ModelRegistry:
                 ),
                 tier_availability=["paid"],
                 priority=101,
-                recommended=True,
+                recommended=False,
                 enabled=True,
                 config=ModelConfig(
                     extra_headers={"anthropic-beta": "context-1m-2025-08-07"},
@@ -80,7 +80,7 @@ class ModelRegistry:
                 ),
                 tier_availability=["paid"],
                 priority=100,
-                recommended=True,
+                recommended=False,
                 enabled=True,
                 config=ModelConfig(
                     extra_headers={"anthropic-beta": "context-1m-2025-08-07"},
@@ -208,6 +208,27 @@ class ModelRegistry:
 
         self.register(
             Model(
+                id="openai/gpt-5-nano",
+                name="GPT-5 Nano",
+                provider=ModelProvider.OPENAI,
+                aliases=["gpt-5-nano", "GPT-5 Nano"],
+                context_window=400_000,
+                capabilities=[
+                    ModelCapability.CHAT,
+                    ModelCapability.STRUCTURED_OUTPUT,
+                ],
+                pricing=ModelPricing(
+                    input_cost_per_million_tokens=0.10,
+                    output_cost_per_million_tokens=1.00,
+                ),
+                tier_availability=["free", "paid"],
+                priority=95,
+                enabled=True,
+            )
+        )
+
+        self.register(
+            Model(
                 id="gemini/gemini-2.5-pro",
                 name="Gemini 2.5 Pro",
                 provider=ModelProvider.GOOGLE,
@@ -224,18 +245,19 @@ class ModelRegistry:
                     output_cost_per_million_tokens=10.00,
                 ),
                 tier_availability=["paid"],
-                priority=95,
+                priority=102,
+                recommended=True,
                 enabled=True,
             )
         )
 
         self.register(
             Model(
-                id="google/gemini-2.5-flash-preview-09-2025",
-                name="Gemini 2.5 Flash Preview",
+                id="gemini/gemini-2.5-flash-preview-09-2025",
+                name="Gemini 2.5 Flash",
                 provider=ModelProvider.GOOGLE,
                 aliases=[
-                    "gemini-2.5-flash",
+                    "gemini-2.5-flash-preview-09-2025",
                     "gemini-2.5-flash-preview",
                     "Gemini 2.5 Flash",
                 ],
@@ -263,7 +285,7 @@ class ModelRegistry:
                 name="Z.AI GLM-4.6",
                 provider=ModelProvider.ZAI,
                 aliases=["glm-4.6", "Z.AI GLM-4.6", "zai/glm-4.6"],
-                context_window=128_000,
+                context_window=200_000,
                 capabilities=[
                     ModelCapability.CHAT,
                     ModelCapability.FUNCTION_CALLING,
