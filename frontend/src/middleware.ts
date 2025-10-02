@@ -16,23 +16,9 @@ const PUBLIC_ROUTES = [
   '/templates', // Template pages should be public
 ];
 
-// Routes that require authentication but are related to billing/trials
-const BILLING_ROUTES = [
-  '/activate-trial',
-  '/subscription',
-];
-
-// Routes that require authentication and active subscription
-const PROTECTED_ROUTES = [
-  '/dashboard',
-  '/agents',
-  '/projects',
-  '/settings',
-];
-
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  
+
   // Skip middleware for static files and API routes
   if (
     pathname.startsWith('/_next') ||
@@ -76,7 +62,7 @@ export async function middleware(request: NextRequest) {
 
   try {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
+
     // Redirect to auth if not authenticated
     if (authError || !user) {
       const url = request.nextUrl.clone();
@@ -85,86 +71,7 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    // Skip billing checks in local mode
-    const isLocalMode = process.env.NEXT_PUBLIC_ENV_MODE?.toLowerCase() === 'local'
-    if (isLocalMode) {
-      return supabaseResponse;
-    }
-
-    // Skip billing checks for billing-related routes
-    if (BILLING_ROUTES.some(route => pathname.startsWith(route))) {
-      return supabaseResponse;
-    }
-
-    // Only check billing for protected routes that require active subscription
-    if (PROTECTED_ROUTES.some(route => pathname.startsWith(route))) {
-      const { data: accounts } = await supabase
-        .schema('basejump')
-        .from('accounts')
-        .select('id')
-        .eq('personal_account', true)
-        .eq('primary_owner_user_id', user.id)
-        .single();
-
-      if (!accounts) {
-        const url = request.nextUrl.clone();
-        url.pathname = '/activate-trial';
-        return NextResponse.redirect(url);
-      }
-
-      const accountId = accounts.id;
-      const { data: creditAccount } = await supabase
-        .from('credit_accounts')
-        .select('tier, trial_status, trial_ends_at')
-        .eq('account_id', accountId)
-        .single();
-
-      const { data: trialHistory } = await supabase
-        .from('trial_history')
-        .select('id')
-        .eq('account_id', accountId)
-        .single();
-
-      const hasUsedTrial = !!trialHistory;
-
-      if (!creditAccount) {
-        if (hasUsedTrial) {
-          const url = request.nextUrl.clone();
-          url.pathname = '/subscription';
-          return NextResponse.redirect(url);
-        } else {
-          const url = request.nextUrl.clone();
-          url.pathname = '/activate-trial';
-          return NextResponse.redirect(url);
-        }
-      }
-
-      const hasTier = creditAccount.tier && creditAccount.tier !== 'none' && creditAccount.tier !== 'free';
-      const hasActiveTrial = creditAccount.trial_status === 'active';
-      const trialExpired = creditAccount.trial_status === 'expired' || creditAccount.trial_status === 'cancelled';
-      const trialConverted = creditAccount.trial_status === 'converted';
-      
-      if (hasTier && (trialConverted || !trialExpired)) {
-        return supabaseResponse;
-      }
-
-      if (!hasTier && !hasActiveTrial && !trialConverted) {
-        if (hasUsedTrial || trialExpired || creditAccount.trial_status === 'cancelled') {
-          const url = request.nextUrl.clone();
-          url.pathname = '/subscription';
-          return NextResponse.redirect(url);
-        } else {
-          const url = request.nextUrl.clone();
-          url.pathname = '/activate-trial';
-          return NextResponse.redirect(url);
-        }
-      } else if ((trialExpired || trialConverted) && !hasTier) {
-        const url = request.nextUrl.clone();
-        url.pathname = '/subscription';
-        return NextResponse.redirect(url);
-      }
-    }
-
+    // For self-hosted: skip all billing/subscription checks
     return supabaseResponse;
   } catch (error) {
     console.error('Middleware error:', error);
