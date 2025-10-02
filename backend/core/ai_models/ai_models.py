@@ -11,6 +11,7 @@ class ModelProvider(Enum):
     GOOGLE = "google"
     XAI = "xai"
     MOONSHOTAI = "moonshotai"
+    ZAI = "zai"
 
 class ModelCapability(Enum):
     CHAT = "chat"
@@ -102,33 +103,40 @@ class Model:
     
     def get_litellm_params(self, **override_params) -> Dict[str, Any]:
         """Get complete LiteLLM parameters for this model, including all configuration."""
+        # Import config here to avoid circular imports
+        from core.utils.config import config
+
         # Start with intelligent defaults
         params = {
             "model": self.id,
             "num_retries": 3,
         }
-        
-    
+
+        # Apply provider-specific API key if not already in override_params
+        if "api_key" not in override_params or override_params.get("api_key") is None:
+            if self.provider == ModelProvider.ZAI and config.ZAI_API_KEY:
+                params["api_key"] = config.ZAI_API_KEY
+
         # Apply model-specific configuration if available
         if self.config:
             # Provider & API configuration parameters
             api_params = [
-                'api_base', 'api_version', 'base_url', 'deployment_id', 
+                'api_base', 'api_version', 'base_url', 'deployment_id',
                 'timeout', 'num_retries'
             ]
-            
+
             # Apply configured parameters
             for param_name in api_params:
                 param_value = getattr(self.config, param_name, None)
                 if param_value is not None:
                     params[param_name] = param_value
-            
+
             if self.config.headers:
                 params["headers"] = self.config.headers.copy()
             if self.config.extra_headers:
                 params["extra_headers"] = self.config.extra_headers.copy()
-        
-        
+
+
         # Apply any runtime overrides
         for key, value in override_params.items():
             if value is not None:
@@ -145,7 +153,7 @@ class Model:
                         params[key] = value
                 else:
                     params[key] = value
-        
+
         return params
     
     def to_dict(self) -> Dict[str, Any]:

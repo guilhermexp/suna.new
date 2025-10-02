@@ -200,6 +200,51 @@ class ModelRegistry:
             enabled=True
         ))
 
+        self.register(Model(
+            id="google/gemini-2.5-flash-preview-09-2025",
+            name="Gemini 2.5 Flash Preview",
+            provider=ModelProvider.GOOGLE,
+            aliases=["gemini-2.5-flash", "gemini-2.5-flash-preview", "Gemini 2.5 Flash"],
+            context_window=1_000_000,
+            capabilities=[
+                ModelCapability.CHAT,
+                ModelCapability.FUNCTION_CALLING,
+                ModelCapability.VISION,
+                ModelCapability.STRUCTURED_OUTPUT,
+            ],
+            pricing=ModelPricing(
+                input_cost_per_million_tokens=0.30,
+                output_cost_per_million_tokens=1.20
+            ),
+            tier_availability=["free", "paid"],
+            priority=94,
+            enabled=True
+        ))
+
+        # Z.AI Model with OpenAI-compatible interface
+        self.register(Model(
+            id="openai/glm-4.6",
+            name="Z.AI GLM-4.6",
+            provider=ModelProvider.ZAI,
+            aliases=["glm-4.6", "Z.AI GLM-4.6", "zai/glm-4.6"],
+            context_window=128_000,
+            capabilities=[
+                ModelCapability.CHAT,
+                ModelCapability.FUNCTION_CALLING,
+                ModelCapability.THINKING,
+            ],
+            pricing=ModelPricing(
+                input_cost_per_million_tokens=0.50,
+                output_cost_per_million_tokens=2.00
+            ),
+            tier_availability=["paid"],
+            priority=93,
+            enabled=True,
+            config=ModelConfig(
+                api_base="https://api.z.ai/api/coding/paas/v4"
+            )
+        ))
+
 
         # self.register(Model(
         #     id="openrouter/moonshotai/kimi-k2",

@@ -43,6 +43,7 @@ def setup_api_keys() -> None:
         "GROQ",
         "OPENROUTER",
         "XAI",
+        "ZAI",
         "MORPH",
         "GEMINI",
         "OPENAI_COMPATIBLE",
