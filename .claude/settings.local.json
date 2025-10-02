@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__railway-mcp__project_create",
+      "mcp__railway-mcp__project_info",
+      "mcp__railway-mcp__database_list_types"
+    ]
+  },
+  "enabledMcpjsonServers": [
+    "supabase",
+    "railway-mcp"
+  ]
+}
