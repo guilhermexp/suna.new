@@ -191,7 +191,7 @@ const STAGING_TIERS: SubscriptionTiers = {
 } as const;
 
 function getEnvironmentMode(): EnvMode {
-  const envMode = process.env.NEXT_PUBLIC_ENV_MODE.toUpperCase();
+  const envMode = (process.env.NEXT_PUBLIC_ENV_MODE || 'production').toUpperCase();
   switch (envMode) {
     case 'LOCAL':
       return EnvMode.LOCAL;
