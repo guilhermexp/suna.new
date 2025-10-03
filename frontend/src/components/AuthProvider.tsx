@@ -31,13 +31,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const getInitialSession = async () => {
+      console.log('AuthProvider: Getting initial session...');
       try {
         const {
           data: { session: currentSession },
         } = await supabase.auth.getSession();
+        console.log('AuthProvider: Session retrieved:', {
+          hasSession: !!currentSession,
+          userId: currentSession?.user?.id,
+          email: currentSession?.user?.email
+        });
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
       } catch (error) {
+        console.error('AuthProvider: Error getting session:', error);
       } finally {
         setIsLoading(false);
       }

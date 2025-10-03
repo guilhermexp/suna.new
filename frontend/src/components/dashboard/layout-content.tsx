@@ -73,7 +73,9 @@ export default function DashboardLayoutContent({
 
   // Check authentication status
   useEffect(() => {
+    console.log('Dashboard layout auth check:', { isLoading, hasUser: !!user, userId: user?.id });
     if (!isLoading && !user) {
+      console.log('No user found, redirecting to /auth');
       router.push('/auth');
     }
   }, [user, isLoading, router]);
