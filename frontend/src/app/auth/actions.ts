@@ -53,13 +53,23 @@ export async function signIn(prevState: any, formData: FormData) {
 
   const supabase = await createClient();
 
-  const { error } = await supabase.auth.signInWithPassword({
+  const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
 
   if (error) {
     return { message: error.message || 'Could not authenticate user' };
+  }
+
+  if (!data.session) {
+    return { message: 'Session could not be established' };
+  }
+
+  // Verify user is actually logged in
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return { message: 'Authentication verification failed' };
   }
 
   // Revalidate to ensure cookies are persisted before redirect
