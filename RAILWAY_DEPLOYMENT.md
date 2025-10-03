@@ -5,23 +5,25 @@
 ### 📦 Serviços Criados:
 
 1. **Redis** (Managed Database)
-   - Banco de dados Redis gerenciado pelo Railway
+   - Banco de dados Redis gerenciado pelo Railway (template oficial)
    - Usado para cache e gerenciamento de filas
+   - Conectado via variáveis de referência
 
 2. **Backend** (API Service)
-   - URL: https://backend-production-ba43.up.railway.app
+   - URL: https://backend-production-bda1.up.railway.app
    - API FastAPI em Python 3.11
-   - Build logs: https://railway.com/project/ac7acd0f-9af5-4a0a-a7a3-093936e37e50/service/488f1359-9b34-48e0-97a0-eaa607ee895c
+   - Status: ✅ Funcionando
+   - Health check: https://backend-production-bda1.up.railway.app/api/health
 
 3. **Worker** (Background Jobs)
    - Processa jobs assíncronos com Dramatiq
    - Conectado ao Redis para gerenciamento de filas
-   - Build logs: https://railway.com/project/ac7acd0f-9af5-4a0a-a7a3-093936e37e50/service/c38cb429-cd23-4ea9-b190-352f00c054d5
+   - Status: ✅ Funcionando
 
 4. **Frontend** (Web App)
-   - URL: https://frontend-production-9d3b.up.railway.app
-   - Next.js 15 com React 18
-   - Build logs: https://railway.com/project/ac7acd0f-9af5-4a0a-a7a3-093936e37e50/service/527a3e27-6036-472d-8504-d161c2172b8f
+   - URL: https://frontend-production-410a.up.railway.app
+   - Next.js 15 com React 18 (standalone mode)
+   - Status: ✅ Funcionando
 
 ### 🔐 Variáveis de Ambiente Configuradas:
 
