@@ -18,15 +18,21 @@ export function createClient() {
           }
 
           // Parse cookies from document.cookie
-          const cookies = document.cookie.split('; ').reduce((acc, cookie) => {
-            const [name, value] = cookie.split('=')
-            if (name && value) {
-              acc.push({ name, value })
-            }
-            return acc
-          }, [] as { name: string; value: string }[])
+          return document.cookie
+            .split('; ')
+            .filter(Boolean)
+            .map(cookie => {
+              const separatorIndex = cookie.indexOf('=')
 
-          return cookies
+              if (separatorIndex === -1) {
+                return { name: cookie, value: '' }
+              }
+
+              const name = cookie.slice(0, separatorIndex)
+              const value = cookie.slice(separatorIndex + 1)
+
+              return { name, value }
+            })
         },
         setAll(cookiesToSet) {
           // Only set cookies in browser environment
@@ -35,8 +41,16 @@ export function createClient() {
           }
 
           cookiesToSet.forEach(({ name, value, options = {} }) => {
-            const cookieStr = `${name}=${value}; path=${options.path || '/'}; max-age=${options.maxAge || 31536000}; SameSite=${options.sameSite || 'Lax'}`
-            document.cookie = cookieStr
+            const cookieAttributes = [
+              `${name}=${value}`,
+              `Path=${options.path ?? '/'}`,
+              options.maxAge ? `Max-Age=${options.maxAge}` : undefined,
+              options.expires ? `Expires=${options.expires.toUTCString()}` : undefined,
+              `SameSite=${options.sameSite ?? 'Lax'}`,
+              options.secure ? 'Secure' : undefined,
+            ].filter(Boolean)
+
+            document.cookie = cookieAttributes.join('; ')
           })
         },
       },
