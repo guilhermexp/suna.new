@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default async function DashboardPage() {
   return (
-    <BackgroundAALChecker>
+    // <BackgroundAALChecker>
       <Suspense
         fallback={
           <div className="flex flex-col h-full w-full">
@@ -28,6 +28,6 @@ export default async function DashboardPage() {
       >
         <DashboardContent />
       </Suspense>
-    </BackgroundAALChecker>
+    // </BackgroundAALChecker>
   );
 }
