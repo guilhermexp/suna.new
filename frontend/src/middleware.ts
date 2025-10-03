@@ -7,7 +7,6 @@ const PUBLIC_ROUTES = [
   '/', // Homepage should be public!
   '/auth',
   '/auth/callback',
-  '/auth/signin-callback',
   '/auth/signup',
   '/auth/forgot-password',
   '/auth/reset-password',

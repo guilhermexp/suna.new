@@ -95,7 +95,9 @@ function LoginContent() {
       result.success &&
       'redirectTo' in result
       ) {
-      window.location.href = result.redirectTo as string;
+      // Use router for navigation
+      const redirectUrl = result.redirectTo as string;
+      router.push(redirectUrl);
       return null;
     }
 
@@ -132,8 +134,9 @@ function LoginContent() {
       result.success &&
       'redirectTo' in result
     ) {
-      // Use window.location for hard navigation to avoid stale state
-      window.location.href = result.redirectTo as string;
+      // Use router for navigation
+      const redirectUrl = result.redirectTo as string;
+      router.push(redirectUrl);
       return null; // Return null to prevent normal form action completion
     }
 
