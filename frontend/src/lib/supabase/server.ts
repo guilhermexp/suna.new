@@ -16,7 +16,14 @@ export async function createClient() {
         setAll(cookiesToSet) {
           try {
             cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options)
+              // Don't set httpOnly for auth tokens so client can read them
+              const modifiedOptions = {
+                ...options,
+                httpOnly: false,
+                sameSite: 'lax' as const,
+                secure: process.env.NODE_ENV === 'production'
+              }
+              cookieStore.set(name, value, modifiedOptions)
             })
           } catch {
             // The `setAll` method was called from a Server Component.

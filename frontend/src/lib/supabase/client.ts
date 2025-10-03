@@ -8,6 +8,27 @@ export function createClient() {
 
   return createBrowserClient(
     supabaseUrl,
-    supabaseAnonKey
+    supabaseAnonKey,
+    {
+      cookies: {
+        get(name: string) {
+          const cookie = document.cookie
+            .split('; ')
+            .find(row => row.startsWith(`${name}=`))
+
+          return cookie ? decodeURIComponent(cookie.split('=')[1]) : undefined
+        },
+        set(name: string, value: string, options: any) {
+          const optionsString = Object.entries(options || {})
+            .map(([k, v]) => `${k}=${v}`)
+            .join('; ')
+
+          document.cookie = `${name}=${encodeURIComponent(value)}; ${optionsString}`
+        },
+        remove(name: string, options: any) {
+          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`
+        },
+      },
+    }
   )
 }
