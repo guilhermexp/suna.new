@@ -83,9 +83,9 @@ README*
 .circleci/
 
 # Docker
-Dockerfile*
+# Dockerfile* - commented out for Railway deployment
 docker-compose*.yml
-.dockerignore
+# .dockerignore - commented out for Railway deployment
 
 # Development tools
 .mypy_cache/
