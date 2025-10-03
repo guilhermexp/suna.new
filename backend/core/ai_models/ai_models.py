@@ -116,6 +116,9 @@ class Model:
         if "api_key" not in override_params or override_params.get("api_key") is None:
             if self.provider == ModelProvider.ZAI and config.ZAI_API_KEY:
                 params["api_key"] = config.ZAI_API_KEY
+            # 302.AI uses Anthropic provider but different API key (detected by custom api_base)
+            elif self.provider == ModelProvider.ANTHROPIC and self.config and self.config.api_base and "302.ai" in self.config.api_base and config.AI302_API_KEY:
+                params["api_key"] = config.AI302_API_KEY
 
         # Apply model-specific configuration if available
         if self.config:

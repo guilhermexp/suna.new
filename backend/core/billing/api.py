@@ -700,34 +700,105 @@ async def get_usage_history(
     account_id: str = Depends(verify_and_get_user_id_from_jwt)
 ) -> Dict:
     try:
+        logger.debug(f"[USAGE_HISTORY] Getting usage history for account {account_id}, days={days}, mode={config.ENV_MODE}")
         db = DBConnection()
         client = await db.client
-        
+
         start_date = datetime.now(timezone.utc) - timedelta(days=days)
-        
+
+        # In LOCAL mode, get usage from messages table (no billing)
+        if config.ENV_MODE == EnvMode.LOCAL:
+            logger.debug(f"[USAGE_HISTORY] Running in LOCAL mode, querying messages from {start_date}")
+            # Query assistant_response_end messages which contain usage data
+            result = await client.from_('messages').select(
+                'created_at, content, metadata, threads!inner(account_id)'
+            ).eq('threads.account_id', account_id).eq('type', 'assistant_response_end').gte(
+                'created_at', start_date.isoformat()
+            ).order('created_at', desc=True).execute()
+
+            daily_usage = {}
+            total_tokens = 0
+            total_cost = 0
+
+            logger.debug(f"[USAGE_HISTORY] Found {len(result.data or [])} messages")
+
+            for i, entry in enumerate(result.data or []):
+                # Check both content and metadata for usage information
+                content = entry.get('content', {})
+                metadata = entry.get('metadata', {})
+
+                # Log first 3 messages for debugging
+                if i < 3:
+                    logger.debug(f"[USAGE_HISTORY] Message {i}: content keys={list(content.keys()) if isinstance(content, dict) else 'not dict'}, metadata keys={list(metadata.keys()) if isinstance(metadata, dict) else 'not dict'}")
+
+                # Usage can be in content.usage or metadata.usage
+                usage = content.get('usage') or metadata.get('usage')
+                if not usage:
+                    continue
+
+                date_key = entry['created_at'][:10]
+                if date_key not in daily_usage:
+                    daily_usage[date_key] = {
+                        'prompt_tokens': 0,
+                        'completion_tokens': 0,
+                        'total_tokens': 0,
+                        'cost': 0,
+                        'count': 0
+                    }
+
+                prompt_tokens = usage.get('prompt_tokens', 0) or 0
+                completion_tokens = usage.get('completion_tokens', 0) or 0
+                tokens = prompt_tokens + completion_tokens
+
+                # Get model from content or metadata
+                model = content.get('model') or metadata.get('model', '')
+                cost = float(calculate_token_cost(prompt_tokens, completion_tokens, model))
+
+                daily_usage[date_key]['prompt_tokens'] += prompt_tokens
+                daily_usage[date_key]['completion_tokens'] += completion_tokens
+                daily_usage[date_key]['total_tokens'] += tokens
+                daily_usage[date_key]['cost'] += cost
+                daily_usage[date_key]['count'] += 1
+
+                total_tokens += tokens
+                total_cost += cost
+
+            logger.debug(f"[USAGE_HISTORY] Processed {len(daily_usage)} days, total_tokens={total_tokens}, total_cost={total_cost}")
+
+            return {
+                'daily_usage': daily_usage,
+                'total_period_tokens': total_tokens,
+                'total_period_cost': total_cost,
+                'mode': 'token_tracking'  # Indicate this is token tracking, not billing
+            }
+
+        # Normal billing mode (cloud/production)
         result = await client.from_('credit_ledger').select('created_at, amount, type, description').eq('account_id', account_id).gte('created_at', start_date.isoformat()).order('created_at', desc=True).execute()
-        
+
         daily_usage = {}
         for entry in result.data:
             date_key = entry['created_at'][:10]
             if date_key not in daily_usage:
                 daily_usage[date_key] = {'credits': 0, 'debits': 0, 'count': 0}
-            
+
             amount = float(entry['amount'])
             if entry['type'] == 'debit':
                 daily_usage[date_key]['debits'] += amount
                 daily_usage[date_key]['count'] += 1
             else:
                 daily_usage[date_key]['credits'] += amount
-        
+
         return {
             'daily_usage': daily_usage,
             'total_period_usage': sum(day['debits'] for day in daily_usage.values()),
-            'total_period_credits': sum(day['credits'] for day in daily_usage.values())
+            'total_period_credits': sum(day['credits'] for day in daily_usage.values()),
+            'mode': 'billing'
         }
-        
+
     except Exception as e:
-        logger.error(f"Error getting usage history: {e}", exc_info=True)
+        import traceback
+        error_msg = f"Error getting usage history: {str(e)}\n{traceback.format_exc()}"
+        logger.error(error_msg)
         raise HTTPException(status_code=500, detail=str(e)) 
 
 

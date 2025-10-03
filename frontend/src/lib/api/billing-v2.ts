@@ -78,12 +78,19 @@ export interface Transaction {
 
 export interface UsageHistory {
   daily_usage: Record<string, {
-    credits: number;
-    debits: number;
+    credits?: number;
+    debits?: number;
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    total_tokens?: number;
+    cost?: number;
     count: number;
   }>;
-  total_period_usage: number;
-  total_period_credits: number;
+  total_period_usage?: number;
+  total_period_credits?: number;
+  total_period_tokens?: number;
+  total_period_cost?: number;
+  mode?: 'billing' | 'token_tracking';
 }
 
 export interface CreateCheckoutSessionRequest {

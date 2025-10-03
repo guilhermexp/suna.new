@@ -16,8 +16,8 @@ from core.utils.config import config
 from core.agentpress.error_processor import ErrorProcessor
 
 # Configure LiteLLM
-# os.environ['LITELLM_LOG'] = 'DEBUG'
-# litellm.set_verbose = True  # Enable verbose logging
+os.environ['LITELLM_LOG'] = 'DEBUG'
+litellm.set_verbose = True  # Enable verbose logging
 litellm.modify_params = True
 litellm.drop_params = True
 
@@ -47,6 +47,7 @@ def setup_api_keys() -> None:
         "MORPH",
         "GEMINI",
         "OPENAI_COMPATIBLE",
+        "AI302",
     ]
     for provider in providers:
         key = getattr(config, f"{provider}_API_KEY")

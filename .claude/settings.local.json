@@ -5,7 +5,10 @@
       "mcp__railway-mcp__project_info",
       "mcp__railway-mcp__database_list_types",
       "Bash(docker logs:*)",
-      "Bash(docker exec:*)"
+      "Bash(docker exec:*)",
+      "mcp__chrome-devtools__list_pages",
+      "mcp__chrome-devtools__evaluate_script",
+      "mcp__chrome-devtools__list_console_messages"
     ]
   },
   "enabledMcpjsonServers": [

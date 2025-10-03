@@ -54,6 +54,45 @@ class ModelRegistry:
             )
         )
 
+        # 302.AI discounted endpoint - same model, 70% cheaper
+        # NOTE: Using "claude-sonnet-4-5-20250929" as model ID (not anthropic/ prefix)
+        # because LiteLLM needs to use Anthropic protocol with custom base_url
+        # IMPORTANT: 200k context limit for 70% discount (vs 10% discount for >200k)
+        self.register(
+            Model(
+                id="claude-sonnet-4-5-20250929",  # No provider prefix for custom endpoint
+                name="Sonnet 4.5 (302.AI)",
+                provider=ModelProvider.ANTHROPIC,
+                aliases=[
+                    "claude-sonnet-4.5-302ai",
+                    "302ai/claude-sonnet-4.5",
+                    "Claude Sonnet 4.5 (302.AI)",
+                    "anthropic/claude-sonnet-4-5-20250929-302ai",
+                ],
+                context_window=200_000,  # 200k limit for 70% discount on /cc endpoint
+                capabilities=[
+                    ModelCapability.CHAT,
+                    ModelCapability.FUNCTION_CALLING,
+                    ModelCapability.VISION,
+                    ModelCapability.THINKING,
+                ],
+                pricing=ModelPricing(
+                    input_cost_per_million_tokens=0.90,  # 302.AI discounted pricing
+                    output_cost_per_million_tokens=4.50,
+                ),
+                tier_availability=["paid"],
+                priority=102,  # Higher priority due to better pricing
+                recommended=True,  # Recommend due to cost savings
+                enabled=True,
+                config=ModelConfig(
+                    api_base="https://api.302.ai/cc",  # 302.AI endpoint (LiteLLM adds /v1/messages)
+                    extra_headers={
+                        "anthropic-version": "2023-06-01",
+                    },
+                ),
+            )
+        )
+
         self.register(
             Model(
                 id="anthropic/claude-sonnet-4-20250514"
@@ -122,14 +161,15 @@ class ModelRegistry:
 
         self.register(
             Model(
-                id="xai/grok-4-fast-non-reasoning",
+                id="xai/grok-4-fast-reasoning",
                 name="Grok 4 Fast",
                 provider=ModelProvider.XAI,
-                aliases=["grok-4-fast-non-reasoning", "Grok 4 Fast"],
+                aliases=["grok-4-fast-reasoning", "Grok 4 Fast"],
                 context_window=2_000_000,
                 capabilities=[
                     ModelCapability.CHAT,
                     ModelCapability.FUNCTION_CALLING,
+                    ModelCapability.THINKING,
                 ],
                 pricing=ModelPricing(
                     input_cost_per_million_tokens=0.20,
