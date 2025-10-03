@@ -51,7 +51,14 @@ export async function middleware(request: NextRequest) {
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value, options }) => {
-            supabaseResponse.cookies.set(name, value, options);
+            // Ensure cookies work in production
+            const cookieOptions = {
+              ...options,
+              sameSite: 'lax' as const,
+              secure: process.env.NODE_ENV === 'production',
+              httpOnly: true
+            };
+            supabaseResponse.cookies.set(name, value, cookieOptions);
           });
         },
       },
