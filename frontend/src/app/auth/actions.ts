@@ -59,8 +59,15 @@ export async function signIn(prevState: any, formData: FormData) {
   });
 
   if (error) {
+    console.error('Sign in error:', error);
     return { message: error.message || 'Could not authenticate user' };
   }
+
+  console.log('Sign in successful:', {
+    userId: data?.user?.id,
+    email: data?.user?.email,
+    hasSession: !!data?.session
+  });
 
   // Simple redirect without verification
   revalidatePath('/', 'layout');

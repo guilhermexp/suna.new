@@ -51,14 +51,7 @@ export async function middleware(request: NextRequest) {
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value, options }) => {
-            // Ensure cookies work in production
-            const cookieOptions = {
-              ...options,
-              sameSite: 'lax' as const,
-              secure: process.env.NODE_ENV === 'production',
-              httpOnly: true
-            };
-            supabaseResponse.cookies.set(name, value, cookieOptions);
+            supabaseResponse.cookies.set(name, value, options);
           });
         },
       },
@@ -67,6 +60,17 @@ export async function middleware(request: NextRequest) {
 
   try {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    // Debug logging
+    if (process.env.NODE_ENV === 'production') {
+      console.log('Middleware auth check:', {
+        path: pathname,
+        hasUser: !!user,
+        userId: user?.id,
+        error: authError?.message,
+        cookies: request.cookies.getAll().map(c => c.name)
+      });
+    }
 
     // Redirect to auth if not authenticated
     if (authError || !user) {
