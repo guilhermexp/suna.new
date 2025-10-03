@@ -341,17 +341,11 @@ class ThreadManager:
                     logger.warning(f"Failed to update Langfuse generation: {e}")
 
             # Make LLM call
-            # Set default max_tokens for Gemini Flash to prevent infinite loops
-            effective_max_tokens = llm_max_tokens
-            if effective_max_tokens is None and "gemini-2.5-flash" in llm_model.lower():
-                effective_max_tokens = 8192
-                logger.debug(f"Setting default max_tokens={effective_max_tokens} for Gemini Flash model")
-
             try:
                 llm_response = await make_llm_api_call(
                     prepared_messages, llm_model,
                     temperature=llm_temperature,
-                    max_tokens=effective_max_tokens,
+                    max_tokens=llm_max_tokens,
                     tools=openapi_tool_schemas,
                     tool_choice=tool_choice if config.native_tool_calling else "none",
                     stream=stream
