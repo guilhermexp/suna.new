@@ -26,7 +26,7 @@ ENV WORKER_CONNECTIONS=2000
 
 ENV PYTHONPATH=/app
 ENV PORT=8000
-EXPOSE $PORT
+EXPOSE 8000
 
 # Gunicorn configuration
 CMD ["sh", "-c", "uv run gunicorn api:app \
