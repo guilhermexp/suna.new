@@ -5,9 +5,7 @@ import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
 import { Toaster } from '@/components/ui/sonner';
-import { Analytics } from '@vercel/analytics/react';
 import { GoogleAnalytics } from '@next/third-parties/google';
-import { SpeedInsights } from '@vercel/speed-insights/next';
 import Script from 'next/script';
 import { PostHogIdentify } from '@/components/posthog-identify';
 import '@/lib/polyfills'; // Load polyfills early
@@ -161,9 +159,7 @@ export default function RootLayout({
             <Toaster />
           </Providers>
           {/* Analytics - Only in production */}
-          {isProduction && <Analytics />}
           {isProduction && <GoogleAnalytics gaId="G-6ETJFB3PT3" />}
-          {isProduction && <SpeedInsights />}
           <PostHogIdentify />
         </ThemeProvider>
       </body>
