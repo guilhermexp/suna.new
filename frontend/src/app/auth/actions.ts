@@ -3,6 +3,7 @@
 import { createTrialCheckout } from '@/lib/api/billing-v2';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
+import { revalidatePath } from 'next/cache';
 
 async function sendWelcomeEmail(email: string, name?: string) {
   try {
@@ -61,8 +62,11 @@ export async function signIn(prevState: any, formData: FormData) {
     return { message: error.message || 'Could not authenticate user' };
   }
 
-  // Use server-side redirect to ensure cookies are set properly
-  return redirect(returnUrl || '/dashboard');
+  // Revalidate to ensure cookies are persisted before redirect
+  revalidatePath('/', 'layout');
+
+  // Return redirect info for client-side navigation
+  return { success: true, redirectTo: returnUrl || '/dashboard' };
 }
 
 export async function signUp(prevState: any, formData: FormData) {
@@ -116,8 +120,11 @@ export async function signUp(prevState: any, formData: FormData) {
     };
   }
 
-  // Use server-side redirect to ensure cookies are set properly
-  return redirect(returnUrl || '/dashboard');
+  // Revalidate to ensure cookies are persisted before redirect
+  revalidatePath('/', 'layout');
+
+  // Return redirect info for client-side navigation
+  return { success: true, redirectTo: returnUrl || '/dashboard' };
 }
 
 export async function forgotPassword(prevState: any, formData: FormData) {
