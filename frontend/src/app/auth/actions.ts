@@ -61,8 +61,8 @@ export async function signIn(prevState: any, formData: FormData) {
     return { message: error.message || 'Could not authenticate user' };
   }
 
-  // Use client-side navigation instead of server-side redirect
-  return { success: true, redirectTo: returnUrl || '/dashboard' };
+  // Use server-side redirect to ensure cookies are set properly
+  return redirect(returnUrl || '/dashboard');
 }
 
 export async function signUp(prevState: any, formData: FormData) {
@@ -116,8 +116,8 @@ export async function signUp(prevState: any, formData: FormData) {
     };
   }
 
-  // Use client-side navigation instead of server-side redirect
-  return { success: true, redirectTo: returnUrl || '/dashboard' };
+  // Use server-side redirect to ensure cookies are set properly
+  return redirect(returnUrl || '/dashboard');
 }
 
 export async function forgotPassword(prevState: any, formData: FormData) {
