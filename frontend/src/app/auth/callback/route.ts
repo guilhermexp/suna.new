@@ -6,9 +6,12 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const code = searchParams.get('code')
   const next = searchParams.get('returnUrl') || searchParams.get('redirect') || '/dashboard'
-  
-  // Use configured URL instead of parsed origin to avoid 0.0.0.0 issues in self-hosted environments
-  const baseUrl = process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'
+
+  // Use headers to determine the actual origin in production (fixes issue #873)
+  const protocol = request.headers.get('x-forwarded-proto') ?? 'https'
+  const host = request.headers.get('host') ?? 'localhost:3000'
+  const baseUrl = `${protocol}://${host}`
+
   const error = searchParams.get('error')
   const errorDescription = searchParams.get('error_description')
 
