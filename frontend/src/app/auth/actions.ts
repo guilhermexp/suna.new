@@ -58,28 +58,11 @@ export async function signIn(prevState: any, formData: FormData) {
     password,
   });
 
-  console.log('SignIn attempt:', { email, error: error?.message, hasSession: !!data?.session });
-
   if (error) {
-    console.error('SignIn error:', error);
     return { message: error.message || 'Could not authenticate user' };
   }
 
-  if (!data.session) {
-    console.error('No session created');
-    return { message: 'Session could not be established' };
-  }
-
-  // Verify user is actually logged in
-  const { data: { user }, error: getUserError } = await supabase.auth.getUser();
-  console.log('GetUser result:', { hasUser: !!user, error: getUserError?.message });
-
-  if (!user) {
-    console.error('User verification failed');
-    return { message: 'Authentication verification failed' };
-  }
-
-  // Revalidate to ensure cookies are persisted before redirect
+  // Simple redirect without verification
   revalidatePath('/', 'layout');
 
   // Return redirect info for client-side navigation

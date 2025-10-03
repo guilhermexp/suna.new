@@ -97,7 +97,8 @@ function LoginContent() {
       ) {
       // Force page reload for navigation to ensure cookies are set
       const redirectUrl = result.redirectTo as string;
-      window.location.href = redirectUrl;
+      // Use replace to prevent back button issues
+      window.location.replace(redirectUrl);
       return null;
     }
 
@@ -136,7 +137,8 @@ function LoginContent() {
     ) {
       // Force page reload for navigation to ensure cookies are set
       const redirectUrl = result.redirectTo as string;
-      window.location.href = redirectUrl;
+      // Use replace to prevent back button issues
+      window.location.replace(redirectUrl);
       return null; // Return null to prevent normal form action completion
     }
 
