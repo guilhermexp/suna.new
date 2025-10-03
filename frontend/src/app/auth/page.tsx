@@ -95,9 +95,9 @@ function LoginContent() {
       result.success &&
       'redirectTo' in result
       ) {
-      // Use router for navigation
+      // Force page reload for navigation to ensure cookies are set
       const redirectUrl = result.redirectTo as string;
-      router.push(redirectUrl);
+      window.location.href = redirectUrl;
       return null;
     }
 
@@ -134,9 +134,9 @@ function LoginContent() {
       result.success &&
       'redirectTo' in result
     ) {
-      // Use router for navigation
+      // Force page reload for navigation to ensure cookies are set
       const redirectUrl = result.redirectTo as string;
-      router.push(redirectUrl);
+      window.location.href = redirectUrl;
       return null; // Return null to prevent normal form action completion
     }
 
