@@ -75,8 +75,11 @@ export async function signIn(prevState: any, formData: FormData) {
   // Revalidate to ensure cookies are persisted before redirect
   revalidatePath('/', 'layout');
 
+  // Use callback route to ensure session is established
+  const callbackUrl = `/auth/signin-callback?returnUrl=${encodeURIComponent(returnUrl || '/dashboard')}`;
+
   // Return redirect info for client-side navigation
-  return { success: true, redirectTo: returnUrl || '/dashboard' };
+  return { success: true, redirectTo: callbackUrl };
 }
 
 export async function signUp(prevState: any, formData: FormData) {
