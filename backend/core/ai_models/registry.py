@@ -181,6 +181,28 @@ class ModelRegistry:
             )
         )
 
+        self.register(
+            Model(
+                id="xai/grok-code-fast-1",
+                name="Grok Code Fast 1",
+                provider=ModelProvider.XAI,
+                aliases=["grok-code-fast-1", "Grok Code Fast 1"],
+                context_window=256_000,
+                capabilities=[
+                    ModelCapability.CHAT,
+                    ModelCapability.FUNCTION_CALLING,
+                    ModelCapability.THINKING,
+                ],
+                pricing=ModelPricing(
+                    input_cost_per_million_tokens=0.20,
+                    output_cost_per_million_tokens=1.50,
+                ),
+                tier_availability=["paid"],
+                priority=97,
+                enabled=True,
+            )
+        )
+
         # self.register(Model(
         #     id="anthropic/claude-3-5-sonnet-latest",
         #     name="Claude 3.5 Sonnet",
@@ -203,10 +225,10 @@ class ModelRegistry:
 
         self.register(
             Model(
-                id="openai/gpt-5",
-                name="GPT-5",
+                id="openai/gpt-5-codex",
+                name="GPT-5 Codex",
                 provider=ModelProvider.OPENAI,
-                aliases=["gpt-5", "GPT-5"],
+                aliases=["gpt-5-codex", "GPT-5 Codex"],
                 context_window=400_000,
                 capabilities=[
                     ModelCapability.CHAT,

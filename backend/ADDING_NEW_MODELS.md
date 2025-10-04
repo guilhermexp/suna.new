@@ -660,5 +660,5 @@ docker-compose up -d backend worker
 ---
 
 **Última atualização:** 2025-10-03
-**Casos testados:** 302.AI, Z.AI, Gemini, Grok, GPT-5
+**Casos testados:** 302.AI, Z.AI, Gemini, Grok, GPT-5 Codex
 **LiteLLM Version:** Latest (com Router)

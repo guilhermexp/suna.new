@@ -14,10 +14,10 @@ The Suna platform automatically configures available LLM models based on which A
 
 | Provider | Environment Variable | Models |
 |----------|---------------------|---------|
-| OpenAI | `OPENAI_API_KEY` | GPT-5, GPT-5 Mini |
+| OpenAI | `OPENAI_API_KEY` | GPT-5 Codex, GPT-5 Mini, GPT-5 Nano |
 | Anthropic | `ANTHROPIC_API_KEY` | Claude Sonnet 4, Claude 3.7 Sonnet |
 | Google | `GEMINI_API_KEY` or `GOOGLE_API_KEY` | Gemini 2.5 Pro |
-| xAI | `XAI_API_KEY` | Grok 4 Fast |
+| xAI | `XAI_API_KEY` | Grok 4 Fast, Grok Code Fast 1 |
 | OpenRouter | `OPENROUTER_API_KEY` | Various models including Kimi K2 |
 | Groq | `GROQ_API_KEY` | Fast inference models |
 

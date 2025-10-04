@@ -8,7 +8,9 @@
       "Bash(docker exec:*)",
       "mcp__chrome-devtools__list_pages",
       "mcp__chrome-devtools__evaluate_script",
-      "mcp__chrome-devtools__list_console_messages"
+      "mcp__chrome-devtools__list_console_messages",
+      "Bash(python3:*)",
+      "Bash(git show:*)"
     ]
   },
   "enabledMcpjsonServers": [

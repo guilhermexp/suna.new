@@ -30,6 +30,8 @@ import { ChatSnack } from './chat-snack';
 import { Brain, Zap, Workflow, Database, ArrowDown } from 'lucide-react';
 import { useComposioToolkitIcon } from '@/hooks/react-query/composio/use-composio';
 import { Skeleton } from '@/components/ui/skeleton';
+import { TokenUsageDisplay } from '../token-usage-display';
+import { MovingBorder } from '@/components/ui/moving-border';
 
 import { IntegrationsRegistry } from '@/components/agents/integrations-registry';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -438,6 +440,37 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
       </div>
     ), [value, handleChange, handleKeyDown, handlePaste, placeholder, isDraggingOver, loading, disabled, isAgentRunning]);
 
+    // Calculate total tokens from messages
+    const totalTokens = useMemo(() => {
+      if (!messages || messages.length === 0) return null;
+
+      let promptTokens = 0;
+      let completionTokens = 0;
+      let totalCost = 0;
+
+      messages.forEach((msg: any) => {
+        if (msg.content?.usage) {
+          promptTokens += msg.content.usage.prompt_tokens || 0;
+          completionTokens += msg.content.usage.completion_tokens || 0;
+        }
+        if (msg.estimated_cost) {
+          const cost = typeof msg.estimated_cost === 'string'
+            ? parseFloat(msg.estimated_cost)
+            : msg.estimated_cost;
+          if (!isNaN(cost)) totalCost += cost;
+        }
+      });
+
+      if (promptTokens === 0 && completionTokens === 0) return null;
+
+      return {
+        promptTokens,
+        completionTokens,
+        totalTokens: promptTokens + completionTokens,
+        estimatedCost: totalCost > 0 ? totalCost : undefined,
+      };
+    }, [messages]);
+
     const renderControls = useMemo(() => (
       <div className="flex items-center justify-between mt-0 mb-1 px-2">
         <div className="flex items-center gap-3">
@@ -454,6 +487,15 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
               setIsUploading={setIsUploading}
               messages={messages}
               isLoggedIn={isLoggedIn}
+            />
+          )}
+          {totalTokens && (
+            <TokenUsageDisplay
+              promptTokens={totalTokens.promptTokens}
+              completionTokens={totalTokens.completionTokens}
+              totalTokens={totalTokens.totalTokens}
+              estimatedCost={totalTokens.estimatedCost}
+              className="opacity-50 hover:opacity-100 transition-opacity"
             />
           )}
         </div>
@@ -499,7 +541,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
           </Button>
         </div>
       </div>
-    ), [hideAttachments, loading, disabled, isAgentRunning, isUploading, sandboxId, messages, isLoggedIn, renderConfigDropdown, billingModalOpen, setBillingModalOpen, handleTranscription, onStopAgent, handleSubmit, value, uploadedFiles]);
+    ), [hideAttachments, loading, disabled, isAgentRunning, isUploading, sandboxId, messages, isLoggedIn, renderConfigDropdown, billingModalOpen, setBillingModalOpen, handleTranscription, onStopAgent, handleSubmit, value, uploadedFiles, totalTokens]);
 
 
 
@@ -531,7 +573,8 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
             </button>
           )}
           <Card
-            className={`-mb-2 shadow-none w-full max-w-4xl mx-auto bg-transparent border-none overflow-visible ${enableAdvancedConfig && selectedAgentId ? '' : 'rounded-3xl'} relative z-10`}
+            className={`-mb-2 shadow-none w-full max-w-4xl mx-auto bg-transparent border-none ${enableAdvancedConfig && selectedAgentId ? '' : 'rounded-3xl'} relative z-10`}
+            style={{ overflow: 'visible' }}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={(e) => {
@@ -552,8 +595,15 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
               }
             }}
           >
-            <div className="w-full text-sm flex flex-col justify-between items-start rounded-lg">
-              <CardContent className={`w-full p-1.5 pb-2 ${bgColor} border rounded-3xl`}>
+            <div className="w-full text-sm flex flex-col justify-between items-start rounded-lg relative">
+              {isAgentRunning && (
+                <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none z-10">
+                  <MovingBorder duration={3000} rx="24" ry="24">
+                    <div className="h-20 w-20 opacity-[0.6] bg-[radial-gradient(circle,hsl(var(--primary))_40%,transparent_60%)]" />
+                  </MovingBorder>
+                </div>
+              )}
+              <CardContent className={`w-full p-1.5 pb-2 ${bgColor} border rounded-3xl relative`}>
                 <AttachmentGroup
                   files={uploadedFiles || []}
                   sandboxId={sandboxId}
