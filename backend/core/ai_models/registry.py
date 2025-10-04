@@ -85,9 +85,11 @@ class ModelRegistry:
                 recommended=True,  # Recommend due to cost savings
                 enabled=True,
                 config=ModelConfig(
-                    api_base="https://api.302.ai/cc",  # 302.AI endpoint (LiteLLM adds /v1/messages)
+                    api_base="https://api.302.ai/cc",  # 302.AI discounted endpoint
                     extra_headers={
+                        "x-api-key": config.AI302_API_KEY,  # Force x-api-key header
                         "anthropic-version": "2023-06-01",
+                        "anthropic-beta": "prompt-caching-2024-07-31",
                     },
                 ),
             )
