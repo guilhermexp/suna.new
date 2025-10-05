@@ -549,7 +549,8 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
             onClick={isAgentRunning && onStopAgent ? onStopAgent : handleSubmit}
             size="sm"
             className={cn(
-              'w-8 h-8 flex-shrink-0 self-end rounded-xl',
+              'w-8 h-8 flex-shrink-0 self-end rounded-xl transition-colors',
+              isAgentRunning ? 'animate-pulse' : '',
               (!value.trim() && uploadedFiles.length === 0 && !isAgentRunning) ||
                 loading ||
                 (disabled && !isAgentRunning)
@@ -656,15 +657,12 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
                       {googleDriveIcon?.icon_url && slackIcon?.icon_url && notionIcon?.icon_url ? (
                         <>
                           <div className="w-4 h-4 bg-white dark:bg-muted border border-border rounded-full flex items-center justify-center shadow-sm">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={googleDriveIcon.icon_url} className="w-2.5 h-2.5" alt="Google Drive" />
                           </div>
                           <div className="w-4 h-4 bg-white dark:bg-muted border border-border rounded-full flex items-center justify-center shadow-sm">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={slackIcon.icon_url} className="w-2.5 h-2.5" alt="Slack" />
                           </div>
                           <div className="w-4 h-4 bg-white dark:bg-muted border border-border rounded-full flex items-center justify-center shadow-sm">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={notionIcon.icon_url} className="w-2.5 h-2.5" alt="Notion" />
                           </div>
                         </>

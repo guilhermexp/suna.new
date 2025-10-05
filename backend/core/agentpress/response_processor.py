@@ -319,15 +319,23 @@ class ResponseProcessor:
             __sequence = continuous_state.get('sequence', 0)    # get the sequence from the previous auto-continue cycle
 
             chunk_count = 0
+            MAX_CHUNK_LIMIT = 50000  # Maximum chunks to prevent infinite loops from malformed model responses
+
             async for chunk in llm_response:
                 chunk_count += 1
-                
+
+                # CRITICAL: Prevent infinite loops from models generating repetitive content
+                if chunk_count > MAX_CHUNK_LIMIT:
+                    logger.error(f"⚠️ INFINITE LOOP DETECTED: Exceeded {MAX_CHUNK_LIMIT} chunks. Model may be generating repetitive content. Stopping stream.")
+                    finish_reason = "length"
+                    break
+
                 # Track timing
                 current_time = datetime.now(timezone.utc).timestamp()
                 if first_chunk_time is None:
                     first_chunk_time = current_time
                 last_chunk_time = current_time
-                
+
                 # Log info about chunks periodically for debugging
                 if chunk_count == 1 or (chunk_count % 1000 == 0) or hasattr(chunk, 'usage'):
                     logger.debug(f"Processing chunk #{chunk_count}, type={type(chunk).__name__}")

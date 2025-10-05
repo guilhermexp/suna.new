@@ -290,7 +290,12 @@ class ThreadManager:
         try:
             # Get and prepare messages
             messages = await self.get_llm_messages(thread_id)
-            
+
+            supports_vision = getattr(self, 'supports_vision', True)
+            helper = getattr(self, 'image_description_helper', None)
+            if not supports_vision and helper is not None and hasattr(helper, '_inject_image_descriptions'):
+                messages = await helper._inject_image_descriptions(messages)
+
             # Handle auto-continue context
             if auto_continue_state['count'] > 0 and auto_continue_state['continuous_state'].get('accumulated_content'):
                 partial_content = auto_continue_state['continuous_state']['accumulated_content']

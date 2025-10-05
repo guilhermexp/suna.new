@@ -260,7 +260,7 @@ export function SeeImageToolView({
   }, [isStreaming]);
 
   // For clear tool, we don't need filePath, but for image tool we do
-  if (!isClearTool && !filePath) {
+  if (!isClearTool && (!filePath || !actualIsSuccess)) {
     return (
       <GenericToolView
         name={name}

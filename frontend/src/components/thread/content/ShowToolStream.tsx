@@ -58,6 +58,7 @@ const STREAMABLE_TOOLS = {
         'Checking Profile Connection',
         'Configuring Profile For Agent',
         'Getting Credential Profiles',
+        'Thinking',
     ])
 };
 

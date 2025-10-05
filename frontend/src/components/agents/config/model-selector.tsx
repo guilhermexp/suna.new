@@ -18,17 +18,12 @@ import {
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { useModelSelection } from '@/hooks/use-model-selection';
-import { formatModelName } from '@/lib/stores/model-store';
+import { formatModelName, CustomModel } from '@/lib/stores/model-store';
 import { isLocalMode } from '@/lib/config';
 import { CustomModelDialog, CustomModelFormData } from '@/components/thread/chat-input/custom-model-dialog';
 import { PaywallDialog } from '@/components/payment/paywall-dialog';
 import { BillingModal } from '@/components/billing/billing-modal';
 import Link from 'next/link';
-
-interface CustomModel {
-  id: string;
-  label: string;
-}
 
 interface AgentModelSelectorProps {
   value?: string;

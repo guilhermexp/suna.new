@@ -2,6 +2,9 @@ import os
 import json
 import asyncio
 import datetime
+import re
+import base64
+import mimetypes
 from typing import Optional, Dict, List, Any, AsyncGenerator
 from dataclasses import dataclass
 
@@ -22,6 +25,7 @@ from core.tools.sb_kb_tool import SandboxKbTool
 from core.tools.data_providers_tool import DataProvidersTool
 from core.tools.expand_msg_tool import ExpandMessageTool
 from core.prompts.prompt import get_system_prompt
+import httpx
 
 from core.utils.logger import logger
 
@@ -354,7 +358,8 @@ class PromptManager:
                                   client=None,
                                   tool_registry=None,
                                   include_xml_examples: bool = False,
-                                  xml_tool_calling: bool = True) -> dict:
+                                  xml_tool_calling: bool = True,
+                                  supports_vision: bool = True) -> dict:
         
         default_system_content = get_system_prompt()
         
@@ -382,6 +387,17 @@ class PromptManager:
                 # Append the full agent builder prompt to the existing system prompt
                 builder_prompt = get_agent_builder_prompt()
                 system_content += f"\n\n{builder_prompt}"
+
+        if not supports_vision:
+            vision_pattern = r"(### 2\.3\.6 VISUAL INPUT)([\s\S]*?)(?=### 2\.3\.7)"
+            replacement = (
+                "### 2.3.6 VISUAL INPUT\n"
+                "- Visual analysis tools are disabled for the current model.\n"
+                "- Rely on textual descriptions or request additional details from the user.\n"
+                "- If image understanding is required, switch to a model with vision capabilities.\n"
+            )
+            if re.search(vision_pattern, system_content):
+                system_content = re.sub(vision_pattern, replacement, system_content)
         
         # Add agent knowledge base context if available
         if agent_config and client and 'agent_id' in agent_config:
@@ -568,7 +584,11 @@ class MessageManager:
 class AgentRunner:
     def __init__(self, config: AgentConfig):
         self.config = config
-    
+        self.model_supports_vision: bool = True
+        self.resolved_model_id: Optional[str] = None
+        self._sandbox_file_tool: Optional[SandboxFilesTool] = None
+        self._image_description_cache: Dict[str, Optional[str]] = {}
+
     async def setup(self):
         if not self.config.trace:
             self.config.trace = langfuse.trace(name="run_agent", session_id=self.config.thread_id, metadata={"project_id": self.config.project_id})
@@ -598,18 +618,39 @@ class AgentRunner:
         sandbox_info = project_data.get('sandbox', {})
         if not sandbox_info.get('id'):
             logger.debug(f"No sandbox found for project {self.config.project_id}; will create lazily when needed")
+
+        try:
+            resolved_model = model_manager.resolve_model_id(self.config.model_name)
+            model = model_manager.get_model(resolved_model)
+            self.resolved_model_id = resolved_model
+            if model:
+                self.model_supports_vision = model.supports_vision
+            else:
+                self.model_supports_vision = True
+        except Exception as e:
+            logger.warning(f"Failed to resolve model capabilities for {self.config.model_name}: {e}")
+            self.model_supports_vision = True
+
+        setattr(self.thread_manager, 'supports_vision', self.model_supports_vision)
+        setattr(self.thread_manager, 'image_description_helper', self)
     
     async def setup_tools(self):
         tool_manager = ToolManager(self.thread_manager, self.config.project_id, self.config.thread_id, self.config.agent_config)
-        
+
         agent_id = None
         if self.config.agent_config:
             agent_id = self.config.agent_config.get('agent_id')
-        
-        disabled_tools = self._get_disabled_tools_from_config()
-        
+
+        disabled_tools = list(self._get_disabled_tools_from_config())
+
+        if not self.model_supports_vision:
+            if 'sb_vision_tool' not in disabled_tools:
+                disabled_tools.append('sb_vision_tool')
+            if 'sb_image_edit_tool' not in disabled_tools:
+                disabled_tools.append('sb_image_edit_tool')
+
         tool_manager.register_all_tools(agent_id=agent_id, disabled_tools=disabled_tools)
-        
+
         is_suna_agent = (self.config.agent_config and self.config.agent_config.get('is_suna_default', False)) or (self.config.agent_config is None)
         logger.debug(f"Agent config check: agent_config={self.config.agent_config is not None}, is_suna_default={is_suna_agent}")
         
@@ -618,7 +659,138 @@ class AgentRunner:
             self._register_suna_specific_tools(disabled_tools)
         else:
             logger.debug("Not a Suna agent, skipping Suna-specific tool registration")
-    
+
+    async def _ensure_sandbox_tool(self) -> SandboxFilesTool:
+        if self._sandbox_file_tool is None:
+            self._sandbox_file_tool = SandboxFilesTool(self.config.project_id, thread_manager=self.thread_manager)
+        await self._sandbox_file_tool._ensure_sandbox()
+        return self._sandbox_file_tool
+
+    @staticmethod
+    def _is_image_path(path: str) -> bool:
+        if not path:
+            return False
+        lowered = path.lower()
+        return lowered.endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.svg'))
+
+    async def _describe_image_with_gemini(self, file_bytes: bytes, mime_type: str) -> Optional[str]:
+        if not config.GEMINI_API_KEY:
+            logger.warning("GEMINI_API_KEY is not configured; skipping image description fallback")
+            return None
+
+        model_id = os.getenv('GEMINI_VISION_MODEL', 'gemini-2.0-flash-exp')
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_id}:generateContent?key={config.GEMINI_API_KEY}"
+
+        encoded = base64.b64encode(file_bytes).decode('utf-8')
+        prompt = (
+            "Provide a concise textual description of this image so a text-only language model can understand its key details. "
+            "Include notable objects, visible text, and overall context."
+        )
+
+        payload = {
+            "contents": [
+                {
+                    "parts": [
+                        {"text": prompt},
+                        {"inline_data": {"mime_type": mime_type, "data": encoded}}
+                    ]
+                }
+            ]
+        }
+
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(url, json=payload)
+                response.raise_for_status()
+                data = response.json()
+        except httpx.HTTPError as exc:
+            logger.error(f"Gemini vision request failed: {exc}")
+            return None
+
+        try:
+            candidates = data.get('candidates', [])
+            if not candidates:
+                return None
+            parts = candidates[0].get('content', {}).get('parts', [])
+            description_parts = [part.get('text', '') for part in parts if 'text' in part]
+            description = " \n".join(filter(None, description_parts)).strip()
+            return description or None
+        except (KeyError, TypeError):
+            logger.error(f"Unexpected Gemini response format: {data}")
+            return None
+
+    async def _get_image_description(self, file_path: str) -> Optional[str]:
+        if file_path in self._image_description_cache:
+            return self._image_description_cache[file_path]
+
+        if not self._is_image_path(file_path):
+            self._image_description_cache[file_path] = None
+            return None
+
+        try:
+            sandbox_tool = await self._ensure_sandbox_tool()
+            cleaned_path = sandbox_tool.clean_path(file_path)
+            full_path = f"{sandbox_tool.workspace_path}/{cleaned_path}"
+            file_bytes = await sandbox_tool.sandbox.fs.download_file(full_path)
+            mime_type, _ = mimetypes.guess_type(full_path)
+            if not mime_type or not mime_type.startswith('image/'):
+                logger.debug(f"Skipping non-image file during fallback: {file_path}")
+                self._image_description_cache[file_path] = None
+                return None
+
+            description = await self._describe_image_with_gemini(file_bytes, mime_type)
+            if description:
+                logger.info(f"Generated fallback image description for {file_path}")
+            else:
+                logger.warning(f"Gemini returned no description for {file_path}")
+
+            self._image_description_cache[file_path] = description
+            return description
+        except Exception as exc:
+            logger.error(f"Failed to generate image description for {file_path}: {exc}")
+            self._image_description_cache[file_path] = None
+            return None
+
+    async def _inject_image_descriptions(self, messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        attachment_pattern = re.compile(r"\[Uploaded File: ([^\]]+)\]")
+
+        for message in messages:
+            if not message or message.get('role') != 'user':
+                continue
+
+            content = message.get('content')
+            if isinstance(content, dict):
+                text = content.get('content', '') or ''
+            elif isinstance(content, str):
+                text = content
+            else:
+                continue
+
+            if not text:
+                continue
+
+            attachments = attachment_pattern.findall(text)
+            if not attachments:
+                continue
+
+            additions = []
+            for path in attachments:
+                marker = f"[Image Description - {path}]"
+                if marker in text:
+                    continue
+                description = await self._get_image_description(path)
+                if description:
+                    additions.append(f"{marker}\n{description}")
+
+            if additions:
+                addition_text = "\n\n" + "\n\n".join(additions)
+                if isinstance(content, dict):
+                    content['content'] = (content.get('content') or '') + addition_text
+                else:
+                    message['content'] = text + addition_text
+
+        return messages
+
     def _get_enabled_methods_for_tool(self, tool_name: str) -> Optional[List[str]]:
         if not self.config.agent_config or 'agentpress_tools' not in self.config.agent_config:
             return None
@@ -720,7 +892,8 @@ class AgentRunner:
             mcp_wrapper_instance, self.client,
             tool_registry=self.thread_manager.tool_registry,
             include_xml_examples=True,
-            xml_tool_calling=True
+            xml_tool_calling=True,
+            supports_vision=self.model_supports_vision
         )
         logger.info(f"📝 System message built once: {len(str(system_message.get('content', '')))} chars")
         logger.debug(f"model_name received: {self.config.model_name}")

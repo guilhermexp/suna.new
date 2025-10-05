@@ -137,7 +137,6 @@ export const EventTriggerConfigForm: React.FC<EventTriggerConfigFormProps> = ({
         workflow_input: { ...(config.workflow_input || {}), ...defaults },
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedWorkflow?.id, config.execution_type]);
 
   const handleVarChange = useCallback((key: string, value: any) => {

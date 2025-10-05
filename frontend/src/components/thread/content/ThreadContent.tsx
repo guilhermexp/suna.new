@@ -20,6 +20,11 @@ import { ComposioUrlDetector } from './composio-url-detector';
 import { StreamingText } from './StreamingText';
 import { HIDE_STREAMING_XML_TAGS } from '@/components/thread/utils';
 
+const CHAT_MARKDOWN_CLASS = "text-base leading-relaxed prose prose-base dark:prose-invert chat-markdown max-w-none [&>:first-child]:mt-0 prose-headings:mt-3 break-words";
+const CHAT_MARKDOWN_WRAP_CLASS = `${CHAT_MARKDOWN_CLASS} overflow-wrap-anywhere`;
+const CHAT_MARKDOWN_INLINE_CLASS = "text-base leading-relaxed prose prose-base dark:prose-invert chat-markdown max-w-none inline-block mr-1 break-words";
+const CHAT_PROSE_CONTAINER_CLASS = "prose prose-base dark:prose-invert chat-markdown max-w-none [&>:first-child]:mt-0 prose-headings:mt-3 break-words overflow-hidden";
+
 
 // Helper function to render all attachments as standalone messages
 export function renderStandaloneAttachments(attachments: string[], fileViewerHandler?: (filePath?: string, filePathList?: string[]) => void, sandboxId?: string, project?: Project, alignRight: boolean = false) {
@@ -135,7 +140,7 @@ export function renderMarkdownContent(
                 const textBeforeBlock = content.substring(lastIndex, match.index);
                 if (textBeforeBlock.trim()) {
                     contentParts.push(
-                        <ComposioUrlDetector key={`md-${lastIndex}`} content={textBeforeBlock} className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none break-words" />
+                        <ComposioUrlDetector key={`md-${lastIndex}`} content={textBeforeBlock} className={CHAT_MARKDOWN_CLASS} />
                     );
                 }
             }
@@ -158,7 +163,7 @@ export function renderMarkdownContent(
                     // Render ask tool content with attachment UI
                     contentParts.push(
                         <div key={`ask-${match.index}-${index}`} className="space-y-3">
-                            <ComposioUrlDetector content={askText} className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none break-words [&>:first-child]:mt-0 prose-headings:mt-3" />
+                            <ComposioUrlDetector content={askText} className={CHAT_MARKDOWN_CLASS} />
                             {renderAttachments(attachmentArray, fileViewerHandler, sandboxId, project)}
                         </div>
                     );
@@ -184,7 +189,7 @@ export function renderMarkdownContent(
                     // Render complete tool content with attachment UI
                     contentParts.push(
                         <div key={`complete-${match.index}-${index}`} className="space-y-3">
-                            <ComposioUrlDetector content={completeText} className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none break-words [&>:first-child]:mt-0 prose-headings:mt-3" />
+                            <ComposioUrlDetector content={completeText} className={CHAT_MARKDOWN_CLASS} />
                             {renderAttachments(attachmentArray, fileViewerHandler, sandboxId, project)}
                         </div>
                     );
@@ -241,12 +246,12 @@ export function renderMarkdownContent(
             const remainingText = content.substring(lastIndex);
             if (remainingText.trim()) {
                 contentParts.push(
-                    <ComposioUrlDetector key={`md-${lastIndex}`} content={remainingText} className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none break-words" />
+                    <ComposioUrlDetector key={`md-${lastIndex}`} content={remainingText} className={CHAT_MARKDOWN_CLASS} />
                 );
             }
         }
 
-        return contentParts.length > 0 ? contentParts : <ComposioUrlDetector content={content} className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none break-words" />;
+        return contentParts.length > 0 ? contentParts : <ComposioUrlDetector content={content} className={CHAT_MARKDOWN_CLASS} />;
     }
 
     // Fall back to old XML format handling
@@ -257,7 +262,7 @@ export function renderMarkdownContent(
 
     // If no XML tags found, just return the full content as markdown
     if (!content.match(xmlRegex)) {
-        return <ComposioUrlDetector content={content} className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none break-words" />;
+        return <ComposioUrlDetector content={content} className={CHAT_MARKDOWN_CLASS} />;
     }
 
     while ((match = xmlRegex.exec(content)) !== null) {
@@ -265,7 +270,7 @@ export function renderMarkdownContent(
         if (match.index > lastIndex) {
             const textBeforeTag = content.substring(lastIndex, match.index);
             contentParts.push(
-                <ComposioUrlDetector key={`md-${lastIndex}`} content={textBeforeTag} className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none inline-block mr-1 break-words" />
+                <ComposioUrlDetector key={`md-${lastIndex}`} content={textBeforeTag} className={CHAT_MARKDOWN_INLINE_CLASS} />
             );
         }
 
@@ -287,7 +292,7 @@ export function renderMarkdownContent(
             // Render <ask> tag content with attachment UI (using the helper)
             contentParts.push(
                 <div key={`ask-${match.index}`} className="space-y-3">
-                    <ComposioUrlDetector content={askContent} className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none break-words [&>:first-child]:mt-0 prose-headings:mt-3" />
+                    <ComposioUrlDetector content={askContent} className={CHAT_MARKDOWN_CLASS} />
                     {renderAttachments(attachments, fileViewerHandler, sandboxId, project)}
                 </div>
             );
@@ -315,7 +320,7 @@ export function renderMarkdownContent(
             // Render <complete> tag content with attachment UI (using the helper)
             contentParts.push(
                 <div key={`complete-${match.index}`} className="space-y-3">
-                    <ComposioUrlDetector content={completeContent} className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none break-words [&>:first-child]:mt-0 prose-headings:mt-3" />
+                    <ComposioUrlDetector content={completeContent} className={CHAT_MARKDOWN_CLASS} />
                     {renderAttachments(attachments, fileViewerHandler, sandboxId, project)}
                 </div>
             );
@@ -358,7 +363,7 @@ export function renderMarkdownContent(
     // Add text after the last tag
     if (lastIndex < content.length) {
         contentParts.push(
-            <ComposioUrlDetector key={`md-${lastIndex}`} content={content.substring(lastIndex)} className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none break-words" />
+            <ComposioUrlDetector key={`md-${lastIndex}`} content={content.substring(lastIndex)} className={CHAT_MARKDOWN_CLASS} />
         );
     }
 
@@ -821,7 +826,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                                     <div className="flex max-w-[85%] rounded-3xl rounded-br-lg bg-card border px-4 py-3 break-words overflow-hidden">
                                                         <div className="space-y-3 min-w-0 flex-1">
                                                             {cleanContent && (
-                                                                <ComposioUrlDetector content={cleanContent} className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none [&>:first-child]:mt-0 prose-headings:mt-3 break-words overflow-wrap-anywhere" />
+                                                                <ComposioUrlDetector content={cleanContent} className={CHAT_MARKDOWN_WRAP_CLASS} />
                                                             )}
 
                                                             {/* Use the helper function to render regular (non-spreadsheet) attachments */}
@@ -922,7 +927,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
 
                                                                         elements.push(
                                                                             <div key={msgKey} className={assistantMessageCount > 0 ? "mt-4" : ""}>
-                                                                                <div className="prose prose-sm dark:prose-invert chat-markdown max-w-none [&>:first-child]:mt-0 prose-headings:mt-3 break-words overflow-hidden">
+                                                                                <div className={CHAT_PROSE_CONTAINER_CLASS}>
                                                                                     {renderedContent}
                                                                                 </div>
                                                                             </div>
@@ -994,7 +999,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                                                             <>
                                                                                 <StreamingText
                                                                                     content={textBeforeTag}
-                                                                                    className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none [&>:first-child]:mt-0 prose-headings:mt-3 break-words overflow-wrap-anywhere"
+                                                                                    className={CHAT_MARKDOWN_WRAP_CLASS}
                                                                                 />
 
                                                                                 {detectedTag && (
@@ -1057,7 +1062,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                                                                     <>
                                                                                         <StreamingText
                                                                                             content={textBeforeTag}
-                                                                                            className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none [&>:first-child]:mt-0 prose-headings:mt-3 break-words overflow-wrap-anywhere"
+                                                                                            className={CHAT_MARKDOWN_WRAP_CLASS}
                                                                                         />
 
                                                                                         {detectedTag && (

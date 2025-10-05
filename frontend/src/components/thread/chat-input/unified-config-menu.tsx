@@ -351,11 +351,8 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
                                             <div className="flex items-center gap-1.5">
                                                 {googleDriveIcon?.icon_url && slackIcon?.icon_url && notionIcon?.icon_url ? (
                                                     <>
-                                                        {/* eslint-disable-next-line @next/next/no-img-element */}
                                                         <img src={googleDriveIcon.icon_url} className="w-4 h-4" alt="Google Drive" />
-                                                        {/* eslint-disable-next-line @next/next/no-img-element */}
                                                         <img src={slackIcon.icon_url} className="w-3.5 h-3.5" alt="Slack" />
-                                                        {/* eslint-disable-next-line @next/next/no-img-element */}
                                                         <img src={notionIcon.icon_url} className="w-3.5 h-3.5" alt="Notion" />
                                                     </>
                                                 ) : (

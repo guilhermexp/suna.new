@@ -83,6 +83,8 @@ export function safeJsonParse<T>(
 // Helper function to get an icon based on tool name
 export const getToolIcon = (toolName: string): ElementType => {
   switch (toolName?.toLowerCase()) {
+    case 'thinking':
+      return MessageSquare;
     case 'browser-navigate-to':
     case 'browser-act':
     case 'browser-extract-content':
@@ -335,6 +337,7 @@ const TOOL_DISPLAY_NAMES = new Map([
   ['create-tasks', 'Creating Tasks'],
   ['update-tasks', 'Updating Tasks'],
   ['complete', 'Completing Task'],
+  ['thinking', 'Thinking'],
   ['crawl-webpage', 'Crawling Website'],
   ['expose-port', 'Exposing Port'],
   ['scrape-webpage', 'Scraping Website'],
@@ -521,6 +524,7 @@ export const HIDE_STREAMING_XML_TAGS = new Set([
   'crawl-webpage',
   'web-search',
   'load-image',
+  'thinking',
   'execute_data_provider_call',
   'execute_data_provider_endpoint',
 

@@ -47,7 +47,14 @@ export const useModelSelection = () => {
   });
 
   const { data: subscriptionData } = useSubscriptionData();
-  const { selectedModel, setSelectedModel } = useModelStore();
+  const {
+    selectedModel,
+    setSelectedModel,
+    customModels,
+    addCustomModel,
+    updateCustomModel,
+    removeCustomModel,
+  } = useModelStore();
 
   // Transform API data to ModelOption format
   const availableModels = useMemo<ModelOption[]>(() => {
@@ -69,11 +76,24 @@ export const useModelSelection = () => {
     });
   }, [modelsData]);
 
-  // Get accessible models based on subscription
+  // Get accessible models based on subscription + custom models
   const accessibleModels = useMemo(() => {
     const hasActiveSubscription = subscriptionData?.status === 'active' || subscriptionData?.status === 'trialing';
-    return availableModels.filter(model => hasActiveSubscription || !model.requiresSubscription);
-  }, [availableModels, subscriptionData]);
+    const apiModels = availableModels.filter(model => hasActiveSubscription || !model.requiresSubscription);
+
+    // Add custom models to accessible list
+    const customModelOptions: ModelOption[] = customModels.map(cm => ({
+      id: cm.id,
+      label: cm.label,
+      requiresSubscription: false,
+      priority: 100, // High priority to show at top
+      recommended: false,
+      capabilities: [],
+      contextWindow: 128000,
+    }));
+
+    return [...customModelOptions, ...apiModels];
+  }, [availableModels, subscriptionData, customModels]);
 
   // Initialize selected model when data loads
   useEffect(() => {
@@ -119,17 +139,17 @@ export const useModelSelection = () => {
       const model = availableModels.find(m => m.id === modelId);
       return model?.requiresSubscription || false;
     },
-    
-    // Compatibility stubs for custom models (not needed with API-driven approach)
+
+    // Custom model management (for local mode)
     handleModelChange,
-    customModels: [] as any[], // Empty array since we're not using custom models
-    addCustomModel: (_model: any) => {}, // No-op
-    updateCustomModel: (_id: string, _model: any) => {}, // No-op
-    removeCustomModel: (_id: string) => {}, // No-op
-    
+    customModels,
+    addCustomModel,
+    updateCustomModel,
+    removeCustomModel,
+
     // Get the actual model ID to send to the backend (no transformation needed now)
     getActualModelId: (modelId: string) => modelId,
-    
+
     // Refresh function for compatibility (no-op since we use API)
     refreshCustomModels: () => {},
   };
