@@ -181,10 +181,10 @@ export function useThreadData(threadId: string, projectId: string): UseThreadDat
   useEffect(() => {
     if (messagesQuery.data && messagesQuery.status === 'success' && !isLoading) {
       // (debug logs removed)
-      
-      // Always reload messages when thread data changes or we have more raw messages than processed
-      const shouldReload = messages.length === 0 || messagesQuery.data.length > messages.length + 50; // Allow for status messages
-      
+
+      // Always reload messages when thread data changes
+      const shouldReload = true; // Always reload to ensure token counts are up to date
+
       if (shouldReload) {
         // (debug logs removed)
         

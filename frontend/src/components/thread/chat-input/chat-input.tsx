@@ -30,6 +30,7 @@ import { Brain, Zap, Workflow, Database, ArrowDown } from 'lucide-react';
 import { useComposioToolkitIcon } from '@/hooks/react-query/composio/use-composio';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TokenUsageDisplay } from '../token-usage-display';
+import { ContextUsageIndicator } from '../context-usage-indicator';
 
 import { IntegrationsRegistry } from '@/components/agents/integrations-registry';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -502,6 +503,28 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
       };
     }, [messages]);
 
+    // Determine model context window for indicator
+    const selectedModelInfo = useMemo(() => modelOptions.find(m => m.id === selectedModel), [modelOptions, selectedModel]);
+
+    // Extract latest prompt token usage to reflect post-compression prompt size
+    const latestPromptTokens = useMemo(() => {
+      if (!messages || messages.length === 0) return null as number | null;
+      for (let i = messages.length - 1; i >= 0; i--) {
+        const msg: any = messages[i];
+        const content = safeJsonParse<Record<string, any>>(msg.content, {});
+        const metadata = safeJsonParse<Record<string, any>>(msg.metadata, {});
+        const usage = (content?.usage as any) || (metadata?.usage as any) || (msg.usage as any);
+        if (!usage) continue;
+        const raw = (usage?.prompt_tokens ?? usage?.promptTokens ?? usage?.prompt) as unknown;
+        if (typeof raw === 'number' && Number.isFinite(raw)) return raw as number;
+        if (typeof raw === 'string') {
+          const n = parseFloat(raw);
+          if (Number.isFinite(n)) return n;
+        }
+      }
+      return null as number | null;
+    }, [messages]);
+
     const renderControls = useMemo(() => (
       <div className="flex items-center justify-between mt-0 mb-1 px-2">
         <div className="flex items-center gap-3">
@@ -550,7 +573,7 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
             size="sm"
             className={cn(
               'w-8 h-8 flex-shrink-0 self-end rounded-xl transition-colors',
-              isAgentRunning ? 'animate-pulse' : '',
+              isAgentRunning ? 'animate-pulse bg-primary/15' : '',
               (!value.trim() && uploadedFiles.length === 0 && !isAgentRunning) ||
                 loading ||
                 (disabled && !isAgentRunning)
@@ -573,7 +596,7 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
           </Button>
         </div>
       </div>
-    ), [hideAttachments, loading, disabled, isAgentRunning, isUploading, sandboxId, messages, isLoggedIn, renderConfigDropdown, billingModalOpen, setBillingModalOpen, handleTranscription, onStopAgent, handleSubmit, value, uploadedFiles, totalTokens]);
+    ), [hideAttachments, loading, disabled, isAgentRunning, isUploading, sandboxId, messages, isLoggedIn, renderConfigDropdown, billingModalOpen, setBillingModalOpen, handleTranscription, onStopAgent, handleSubmit, value, uploadedFiles, totalTokens, latestPromptTokens, selectedModelInfo?.contextWindow]);
 
 
 
@@ -629,6 +652,15 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
           >
             <div className="w-full text-sm flex flex-col justify-between items-start rounded-lg relative">
               <CardContent className={`w-full p-1.5 pb-2 ${bgColor} border rounded-3xl relative`}>
+                {latestPromptTokens !== null && selectedModelInfo?.contextWindow && (
+                  <div className="absolute top-1.5 right-2 z-20">
+                    <ContextUsageIndicator
+                      usedTokens={latestPromptTokens}
+                      contextWindow={selectedModelInfo.contextWindow}
+                      className="opacity-90 hover:opacity-100"
+                    />
+                  </div>
+                )}
                 <AttachmentGroup
                   files={uploadedFiles || []}
                   sandboxId={sandboxId}

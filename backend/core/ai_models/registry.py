@@ -185,15 +185,16 @@ class ModelRegistry:
 
         self.register(
             Model(
-                id="xai/grok-code-fast-1",
+                id="openrouter/x-ai/grok-code-fast-1",
                 name="Grok Code Fast 1",
-                provider=ModelProvider.XAI,
-                aliases=["grok-code-fast-1", "Grok Code Fast 1"],
+                provider=ModelProvider.OPENROUTER,
+                aliases=["grok-code-fast-1", "Grok Code Fast 1", "x-ai/grok-code-fast-1"],
                 context_window=256_000,
                 capabilities=[
                     ModelCapability.CHAT,
                     ModelCapability.FUNCTION_CALLING,
                     ModelCapability.THINKING,
+                    ModelCapability.STRUCTURED_OUTPUT,
                 ],
                 pricing=ModelPricing(
                     input_cost_per_million_tokens=0.20,
@@ -202,6 +203,12 @@ class ModelRegistry:
                 tier_availability=["paid"],
                 priority=97,
                 enabled=True,
+                config=ModelConfig(
+                    extra_headers={
+                        "HTTP-Referer": config.OR_SITE_URL if hasattr(config, 'OR_SITE_URL') and config.OR_SITE_URL else "",
+                        "X-Title": config.OR_APP_NAME if hasattr(config, 'OR_APP_NAME') and config.OR_APP_NAME else "Suna"
+                    }
+                ),
             )
         )
 
@@ -232,11 +239,13 @@ class ModelRegistry:
                 provider=ModelProvider.OPENAI,
                 aliases=["gpt-5-codex", "GPT-5 Codex"],
                 context_window=400_000,
+                max_output_tokens=128_000,
                 capabilities=[
                     ModelCapability.CHAT,
                     ModelCapability.FUNCTION_CALLING,
                     ModelCapability.VISION,
                     ModelCapability.STRUCTURED_OUTPUT,
+                    ModelCapability.THINKING,
                 ],
                 pricing=ModelPricing(
                     input_cost_per_million_tokens=1.25,

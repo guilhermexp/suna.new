@@ -52,11 +52,17 @@ Este documento analisa todas as páginas e componentes de upgrade/billing encont
 - **Uso em Self-Hosting**: Completamente desnecessário
 - **Risco de Remoção**: **MUITO BAIXO** - Não afeta self-hosting
 
-#### `/app/(subscription/page.tsx`
-- **Descrição**: Página de assinaturas
-- **Função**: Gerenciamento de assinaturas
-- **Uso em Self-Hosting**: Desnecessário (não há assinaturas)
-- **Risco de Remoção**: **BAIXO** - Específico para billing
+#### Páginas de Billing (Substituem a antiga “subscription”)
+- `frontend/src/app/(dashboard)/(personalAccount)/settings/billing/page.tsx`
+  - **Descrição**: Billing da conta pessoal
+  - **Função**: Status, créditos e gerenciamento via modal
+  - **Uso em Self-Hosting**: Desnecessário para compra/gestão; útil para exibir status local
+  - **Risco de Remoção**: **MÉDIO** — diversas referências/links
+- `frontend/src/app/(dashboard)/(teamAccount)/[accountSlug]/settings/billing/page.tsx`
+  - **Descrição**: Billing por equipe
+  - **Função**: Status e atalho para modal
+  - **Uso em Self-Hosting**: Desnecessário para compra/gestão; útil para status
+  - **Risco de Remoção**: **MÉDIO**
 
 ### 5. Navegação e Layout (Baixo Impacto)
 
@@ -206,3 +212,130 @@ A abordagem recomendada é **adaptar** em vez de **remover** sempre que possíve
 **Data**: 4 de Outubro de 2024  
 **Análise**: Baseada no código fonte v0.1.0  
 **Ambiente**: Self-hosting local mode
+
+---
+
+## Validação Técnica — 05 de Outubro de 2025
+
+Esta seção consolida caminhos reais, pontos de uso e proteções detectadas no código atual, para reduzir risco de erro ao executar remoções/ajustes.
+
+### Componentes/Páginas Confirmados (com caminhos)
+
+- Diálogo genérico de upgrade (reutilizado amplamente)
+  - `frontend/src/components/ui/upgrade-dialog.tsx`
+
+- Diálogo de upgrade (dentro de thread)
+  - `frontend/src/app/(dashboard)/projects/[projectId]/thread/_components/UpgradeDialog.tsx`
+  - Exibição gated por `!isLocalMode()` no thread:
+    - `frontend/src/components/thread/ThreadComponent.tsx:765`
+
+- Modal de Billing (centraliza planos/gestão/portal)
+  - `frontend/src/components/billing/billing-modal.tsx`
+  - Em modo local, retorna conteúdo informativo (desabilitado):
+    - `frontend/src/components/billing/billing-modal.tsx:210-229`
+
+- Seção de Preços (homepage/diálogos)
+  - `frontend/src/components/home/sections/pricing-section.tsx`
+  - Em modo local, exibe aviso e desabilita billing:
+    - `frontend/src/components/home/sections/pricing-section.tsx:674-682`
+
+- Página de preços por modelo (recomendado manter)
+  - `frontend/src/app/(dashboard)/model-pricing/page.tsx`
+
+- Página Enterprise (pouco relevante para self-hosting)
+  - `frontend/src/app/(home)/enterprise/page.tsx`
+  - Link na home: `frontend/src/lib/home.tsx:80`
+
+- Layout de Settings (conta pessoal) — contém link “Billing”
+  - `frontend/src/app/(dashboard)/(personalAccount)/settings/layout.tsx`
+  - Item atual: `Billing` em `items` (linha ~15)
+
+- Páginas de Billing (substituem “subscription” genérica)
+  - Pessoal: `frontend/src/app/(dashboard)/(personalAccount)/settings/billing/page.tsx`
+  - Time: `frontend/src/app/(dashboard)/(teamAccount)/[accountSlug]/settings/billing/page.tsx`
+
+### Mapa de Usos — Onde Upgrade/Billing aparece
+
+- UpgradeDialog usado em:
+  - `frontend/src/components/agents/agent-count-limit-dialog.tsx`
+  - `frontend/src/app/(dashboard)/projects/[projectId]/thread/_components/UpgradeDialog.tsx`
+  - `frontend/src/components/thread/agent-run-limit-dialog.tsx`
+
+- BillingModal referenciado em:
+  - `frontend/src/app/(dashboard)/(personalAccount)/settings/billing/page.tsx`
+  - `frontend/src/app/(dashboard)/(teamAccount)/[accountSlug]/settings/billing/page.tsx`
+  - `frontend/src/app/(dashboard)/projects/[projectId]/thread/_components/UpgradeDialog.tsx`
+  - `frontend/src/components/home/sections/hero-section.tsx`
+  - `frontend/src/components/thread/chat-input/chat-input.tsx`
+  - `frontend/src/components/agents/config/model-selector.tsx`
+  - `frontend/src/components/sidebar/nav-user-with-teams.tsx`
+
+### Pontos de Navegação que Precisam de Condicional (Local)
+
+- Menu do usuário (header/sidebar):
+  - “Upgrade” abre BillingModal — ocultar em `isLocalMode()`
+    - `frontend/src/components/sidebar/nav-user-with-teams.tsx:323-326`
+  - “Billing” (link para settings/billing) — ocultar em `isLocalMode()`
+    - `frontend/src/components/sidebar/nav-user-with-teams.tsx:327-332`
+
+- Layout de Settings (conta pessoal):
+  - Remover/condicionar item `Billing` do array `items`
+    - `frontend/src/app/(dashboard)/(personalAccount)/settings/layout.tsx:14-17`
+
+### Proteções/Comportamento em Modo Local
+
+- Frontend:
+  - `isLocalMode()` definido em `frontend/src/lib/config.ts`
+  - Desabilita pricing/billing na UI (PricingSection, BillingModal), evita mostrar UpgradeDialog no thread
+
+- Backend:
+  - `EnvMode.LOCAL` retorna permissões/creditos “infinito” e ignora cobranças:
+    - `backend/core/billing/api.py` (handlers `/billing/check` e `/billing/check-status`)
+  - Checagens unificadas de billing/modelos respeitam LOCAL:
+    - `backend/core/agent_runs.py` e `backend/core/triggers/execution_service.py`
+
+### Plano Atualizado (Preciso e com Caminhos)
+
+Fase 1 — Modificações seguras (sem quebrar UX):
+1) Ocultar navegação “Billing” no settings (local)
+   - Editar `frontend/src/app/(dashboard)/(personalAccount)/settings/layout.tsx`
+   - Remover ou condicionar `{ name: 'Billing', href: '/settings/billing' }`
+2) Ocultar “Upgrade” e “Billing” no menu do usuário (local)
+   - Editar `frontend/src/components/sidebar/nav-user-with-teams.tsx`
+   - Condicionar itens das linhas 323–332 a `!isLocalMode()`
+3) Manter `BillingModal` e `UpgradeDialog` (já possuem gating/UX informativa em local)
+4) Manter “Model Pricing” e garantir link de acesso via settings ou dashboard
+
+Fase 2 — Adaptações opcionais:
+5) Tornar o conteúdo do UpgradeDialog informativo em self-host (sem CTA de compra)
+   - `frontend/src/app/(dashboard)/projects/[projectId]/thread/_components/UpgradeDialog.tsx`
+6) Simplificar `BillingModal` em local (já faz early-return; opcional ajustar texto)
+7) Ajustar copy na PricingSection para foco educativo (já mostra aviso em local)
+
+Fase 3 — Remoções opcionais:
+8) Remover página Enterprise e/ou link da home
+   - Página: `frontend/src/app/(home)/enterprise/page.tsx`
+   - Link: `frontend/src/lib/home.tsx:80`
+
+### Checklist de Execução
+
+Antes de aplicar remoções/condicionais:
+- [ ] Buscar por usos de `UpgradeDialog` e `BillingModal` e confirmar que não há renderizações sem gating
+- [ ] Validar todos os links para `/settings/billing` e botões que abrem BillingModal
+- [ ] Confirmar que PricingSection e BillingModal exibem aviso em local
+- [ ] Rodar smoke test de navegação: menu usuário, settings, thread, home
+- [ ] Em produção/staging, confirmar que gating não oculta nada por engano
+
+### Comandos de Verificação (ripgrep)
+
+```
+rg -n --hidden -S "components/ui/upgrade-dialog|UpgradeDialog" frontend
+rg -n --hidden -S "components/billing/billing-modal" frontend
+rg -n --hidden -S "isLocalMode\(\)" frontend
+rg -n --hidden -S "settings/billing|/model-pricing|/enterprise" frontend
+```
+
+### Notas
+
+- O documento original mencionava uma página genérica “subscription”; os paths corretos hoje são as páginas de settings/billing (pessoal e time).
+- Preferir “adaptar” em vez de “remover”, mantendo estruturas úteis para futuros ajustes.

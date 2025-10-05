@@ -20,10 +20,10 @@ import { ComposioUrlDetector } from './composio-url-detector';
 import { StreamingText } from './StreamingText';
 import { HIDE_STREAMING_XML_TAGS } from '@/components/thread/utils';
 
-const CHAT_MARKDOWN_CLASS = "text-base leading-relaxed prose prose-base dark:prose-invert chat-markdown max-w-none [&>:first-child]:mt-0 prose-headings:mt-3 break-words";
+const CHAT_MARKDOWN_CLASS = "text-base leading-relaxed prose dark:prose-invert chat-markdown max-w-none [&>:first-child]:mt-0 prose-headings:mt-3 break-words";
 const CHAT_MARKDOWN_WRAP_CLASS = `${CHAT_MARKDOWN_CLASS} overflow-wrap-anywhere`;
-const CHAT_MARKDOWN_INLINE_CLASS = "text-base leading-relaxed prose prose-base dark:prose-invert chat-markdown max-w-none inline-block mr-1 break-words";
-const CHAT_PROSE_CONTAINER_CLASS = "prose prose-base dark:prose-invert chat-markdown max-w-none [&>:first-child]:mt-0 prose-headings:mt-3 break-words overflow-hidden";
+const CHAT_MARKDOWN_INLINE_CLASS = "text-base leading-relaxed prose dark:prose-invert chat-markdown max-w-none inline-block mr-1 break-words";
+const CHAT_PROSE_CONTAINER_CLASS = "prose dark:prose-invert chat-markdown max-w-none [&>:first-child]:mt-0 prose-headings:mt-3 break-words overflow-hidden";
 
 
 // Helper function to render all attachments as standalone messages
@@ -826,7 +826,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                                     <div className="flex max-w-[85%] rounded-3xl rounded-br-lg bg-card border px-4 py-3 break-words overflow-hidden">
                                                         <div className="space-y-3 min-w-0 flex-1">
                                                             {cleanContent && (
-                                                                <ComposioUrlDetector content={cleanContent} className={CHAT_MARKDOWN_WRAP_CLASS} />
+                                                                <ComposioUrlDetector content={cleanContent} className="text-sm leading-relaxed prose prose-sm dark:prose-invert chat-markdown max-w-none [&>:first-child]:mt-0 prose-headings:mt-3 break-words overflow-wrap-anywhere" />
                                                             )}
 
                                                             {/* Use the helper function to render regular (non-spreadsheet) attachments */}
@@ -862,7 +862,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                                     </div>
 
                                                     {/* Message content - ALL messages in the group */}
-                                                    <div className="flex max-w-[90%] text-sm break-words overflow-hidden">
+                                                    <div className="flex max-w-[90%] break-words overflow-hidden">
                                                         <div className="space-y-2 min-w-0 flex-1">
                                                             {(() => {
                                                                 // In debug mode, just show raw messages content
@@ -1153,7 +1153,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                         </div>
 
                                         {/* Streaming indicator content */}
-                                        <div className="max-w-[90%] px-4 py-3 text-sm">
+                                        <div className="max-w-[90%] px-4 py-3">
                                             <div className="flex items-center gap-1.5 py-1">
                                                 <div className="h-1.5 w-1.5 rounded-full bg-primary/50 animate-pulse duration-1000" />
                                                 <div className="h-1.5 w-1.5 rounded-full bg-primary/50 animate-pulse duration-1000 delay-150" />

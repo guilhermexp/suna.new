@@ -44,7 +44,7 @@ export function MarkdownRenderer({
                 <div className="p-4">
                     <FileMarkdownRenderer
                         content={content}
-                        className="prose prose-sm dark:prose-invert max-w-none [&>:first-child]:mt-0"
+                        className="prose prose-xs dark:prose-invert max-w-none [&>:first-child]:mt-0"
                         project={project}
                         basePath={derivedBasePath}
                     />

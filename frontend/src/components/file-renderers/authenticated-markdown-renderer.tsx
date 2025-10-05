@@ -192,7 +192,7 @@ export const MarkdownRenderer = forwardRef<
   return (
     <ScrollArea className={cn('w-full h-full rounded-md relative', className)}>
       <div
-        className="p-4 markdown prose prose-sm dark:prose-invert max-w-none"
+        className="p-4 markdown prose prose-xs dark:prose-invert max-w-none"
         ref={ref}
       >
         <ReactMarkdown

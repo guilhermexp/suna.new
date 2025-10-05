@@ -29,18 +29,6 @@ export const TokenUsageDisplay: React.FC<TokenUsageDisplayProps> = ({
     <div className={`flex items-center gap-2 text-xs text-muted-foreground ${className}`}>
       <Activity className="h-3 w-3" />
       <div className="flex items-center gap-3">
-        {promptTokens !== undefined && (
-          <span className="flex items-center gap-1">
-            <span className="text-muted-foreground/70">In:</span>
-            <span className="font-mono">{promptTokens.toLocaleString()}</span>
-          </span>
-        )}
-        {completionTokens !== undefined && (
-          <span className="flex items-center gap-1">
-            <span className="text-muted-foreground/70">Out:</span>
-            <span className="font-mono">{completionTokens.toLocaleString()}</span>
-          </span>
-        )}
         {total > 0 && (
           <span className="flex items-center gap-1">
             <span className="text-muted-foreground/70">Total:</span>
