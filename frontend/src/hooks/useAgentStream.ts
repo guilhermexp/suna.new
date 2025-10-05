@@ -453,6 +453,28 @@ export function useAgentStream(
           // Handle other message types if necessary, e.g., if backend sends historical context
           if (message.message_id) callbacks.onMessage(message);
           break;
+        case 'assistant_response_end': {
+          const serializedContent =
+            typeof message.content === 'string'
+              ? message.content
+              : JSON.stringify(message.content ?? {});
+          const serializedMetadata =
+            typeof message.metadata === 'string'
+              ? message.metadata || '{}'
+              : JSON.stringify(message.metadata ?? {});
+
+          callbacks.onMessage({
+            ...message,
+            content: serializedContent,
+            metadata: serializedMetadata,
+            type: 'assistant_response_end',
+          });
+          break;
+        }
+        case 'llm_response_start':
+          // LLM response start event - informational only, can be logged or ignored
+          // console.debug('[useAgentStream] LLM response started');
+          break;
         default:
           console.warn(
             '[useAgentStream] Unhandled message type:',

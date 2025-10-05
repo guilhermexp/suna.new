@@ -298,12 +298,23 @@ export function useFilePreloader() {
       const normalizedPath = normalizePath(path);
       const contentType = getContentTypeFromPath(path);
       
-      // Check if already cached
+      // Check if already cached or previously attempted
       const queryKey = fileQueryKeys.content(sandboxId, normalizedPath, contentType);
       const existingData = queryClient.getQueryData(queryKey);
+      const existingState = queryClient.getQueryState(queryKey);
       
-      if (existingData) {
+      if (existingData !== undefined) {
         return existingData;
+      }
+
+      if (existingState) {
+        if (existingState.fetchStatus === 'fetching') {
+          return existingState.data;
+        }
+
+        if (existingState.status === 'error') {
+          return existingState.error;
+        }
       }
       
       // Prefetch the file

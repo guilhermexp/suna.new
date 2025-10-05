@@ -104,26 +104,95 @@ class ToolRegistry:
         return schemas
 
     def get_usage_examples(self) -> Dict[str, str]:
-        """Get usage examples for tools.
-        
+        """Generate example XML invocations for registered tools.
+
         Returns:
-            Dict mapping function names to their usage examples
+            Dict mapping function names to formatted usage examples.
         """
-        examples = {}
-        
-        # Get all registered tools and their schemas
+        examples: Dict[str, str] = {}
+
         for tool_name, tool_info in self.tools.items():
-            tool_instance = tool_info['instance']
-            all_schemas = tool_instance.get_schemas()
-            
-            # Look for usage examples for this function
-            if tool_name in all_schemas:
-                for schema in all_schemas[tool_name]:
-                    if schema.schema_type == SchemaType.USAGE_EXAMPLE:
-                        examples[tool_name] = schema.schema.get('example', '')
-                        # logger.debug(f"Found usage example for {tool_name}")
-                        break
-        
-        # logger.debug(f"Retrieved {len(examples)} usage examples")
+            schema = tool_info.get('schema')
+            if not schema or schema.schema_type != SchemaType.OPENAPI:
+                continue
+
+            function_schema = (schema.schema or {}).get('function', {})
+            function_name = function_schema.get('name', tool_name)
+            parameters_schema = function_schema.get('parameters', {})
+            properties = parameters_schema.get('properties', {}) or {}
+            required_params = parameters_schema.get('required', []) or list(properties.keys())
+
+            param_lines: List[str] = []
+            for param_name in required_params:
+                param_schema = properties.get(param_name, {})
+                example_value = self._build_example_value(param_schema)
+                if isinstance(example_value, (dict, list)):
+                    example_str = json.dumps(example_value, ensure_ascii=False)
+                else:
+                    example_str = str(example_value)
+
+                param_lines.append(f"  <parameter name=\"{param_name}\">{example_str}</parameter>")
+
+            example_lines = [
+                "<function_calls>",
+                f"<invoke name=\"{function_name}\">"
+            ]
+            example_lines.extend(param_lines)
+            example_lines.append("</invoke>")
+            example_lines.append("</function_calls>")
+
+            examples[function_name] = "\n".join(example_lines)
+
         return examples
 
+    def _build_example_value(self, schema: Dict[str, Any], depth: int = 0) -> Any:
+        """Create an example value for a parameter schema."""
+        if not schema:
+            return "example"
+
+        if 'example' in schema and schema['example'] is not None:
+            return schema['example']
+
+        if 'enum' in schema and schema['enum']:
+            return schema['enum'][0]
+
+        schema_type = schema.get('type')
+
+        if schema_type == 'string':
+            return schema.get('default') or "example"
+
+        if schema_type == 'integer':
+            return schema.get('default', 1)
+
+        if schema_type == 'number':
+            return schema.get('default', 1.0)
+
+        if schema_type == 'boolean':
+            return schema.get('default', True)
+
+        if schema_type == 'array':
+            items_schema = schema.get('items', {"type": "string"})
+            return [self._build_example_value(items_schema, depth + 1)]
+
+        if schema_type == 'object':
+            if depth > 3:
+                return {}
+
+            properties = schema.get('properties', {}) or {}
+            required = schema.get('required', []) or list(properties.keys())
+
+            if not properties:
+                return {}
+
+            example_obj = {}
+            for key in required:
+                example_obj[key] = self._build_example_value(properties.get(key, {}), depth + 1)
+            return example_obj
+
+        if 'anyOf' in schema and schema['anyOf']:
+            return self._build_example_value(schema['anyOf'][0], depth + 1)
+
+        if 'oneOf' in schema and schema['oneOf']:
+            return self._build_example_value(schema['oneOf'][0], depth + 1)
+
+        return "example"

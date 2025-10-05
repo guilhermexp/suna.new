@@ -694,6 +694,7 @@ async def get_credit_breakdown(
         'message': f"Your ${total:.2f} balance includes ${expiring:.2f} expiring (plan) credits and ${non_expiring:.2f} non-expiring (purchased) credits"
     }
 
+
 @router.get("/usage-history")
 async def get_usage_history(
     days: int = 30,

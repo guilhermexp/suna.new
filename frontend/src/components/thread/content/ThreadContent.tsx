@@ -424,6 +424,11 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
 
     // React Query file preloader
     const { preloadFiles } = useFilePreloader();
+    const preloadedAttachmentsRef = useRef<Set<string>>(new Set());
+
+    useEffect(() => {
+        preloadedAttachmentsRef.current.clear();
+    }, [sandboxId]);
 
     const containerClassName = isPreviewMode
         ? "flex-1 overflow-y-auto scrollbar-thin scrollbar-track-secondary/0 scrollbar-thumb-primary/10 scrollbar-thumb-rounded-full hover:scrollbar-thumb-primary/10 py-4 pb-0"
@@ -431,6 +436,10 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
 
     // In playback mode, we use visibleMessages instead of messages
     const displayMessages = readOnly && visibleMessages ? visibleMessages : messages;
+    const renderableMessages = React.useMemo(
+        () => displayMessages.filter((msg) => msg.type !== 'assistant_response_end'),
+        [displayMessages],
+    );
 
     // Helper function to get agent info robustly
     const getAgentInfo = useCallback(() => {
@@ -439,7 +448,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
         const isSunaDefaultAgent = agentMetadata?.is_suna_default || false;
 
         // Then check recent messages for agent info
-        const recentAssistantWithAgent = [...displayMessages].reverse().find(msg =>
+        const recentAssistantWithAgent = [...renderableMessages].reverse().find(msg =>
             msg.type === 'assistant' && msg.agents?.name
         );
 
@@ -498,7 +507,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
             name: agentName || 'Suna',
             avatar: agentAvatar
         };
-    }, [threadMetadata, displayMessages, agentName, agentAvatar, agentMetadata, agentData]);
+    }, [threadMetadata, renderableMessages, agentName, agentAvatar, agentMetadata, agentData]);
 
     // Simplified scroll handler - flex-column-reverse handles positioning
     const handleScroll = useCallback(() => {
@@ -528,14 +537,21 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
         if (containerRef) resizeObserver.observe(containerRef);
 
         return () => resizeObserver.disconnect();
-    }, [displayMessages, streamingTextContent, agentStatus, scrollContainerRef]);
+    }, [renderableMessages, streamingTextContent, agentStatus, scrollContainerRef]);
 
     // Preload all message attachments when messages change or sandboxId is provided
     React.useEffect(() => {
         if (!sandboxId) return;
 
         // Extract all file attachments from messages
-        const allAttachments: string[] = [];
+        const normalizeAttachmentPath = (path: string): string => {
+            if (!path) return '/workspace';
+            return path.startsWith('/workspace')
+                ? path
+                : `/workspace/${path.replace(/^\//, '')}`;
+        };
+
+        const normalizedAttachments: string[] = [];
 
         displayMessages.forEach(message => {
             if (message.type === 'user') {
@@ -546,7 +562,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                         attachmentsMatch.forEach(match => {
                             const pathMatch = match.match(/\[Uploaded File: (.*?)\]/);
                             if (pathMatch && pathMatch[1]) {
-                                allAttachments.push(pathMatch[1]);
+                                normalizedAttachments.push(normalizeAttachmentPath(pathMatch[1]));
                             }
                         });
                     }
@@ -557,17 +573,24 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
         });
 
         // Use React Query preloading if we have attachments AND a valid token
-        if (allAttachments.length > 0 && session?.access_token) {
-            // Preload files with React Query in background
-            preloadFiles(sandboxId, allAttachments).catch(err => {
-                console.error('React Query preload failed:', err);
+        if (normalizedAttachments.length > 0 && session?.access_token) {
+            const attachmentsToPreload = normalizedAttachments.filter(path => {
+                return !preloadedAttachmentsRef.current.has(path);
             });
+
+            if (attachmentsToPreload.length > 0) {
+                attachmentsToPreload.forEach(path => preloadedAttachmentsRef.current.add(path));
+
+                preloadFiles(sandboxId, attachmentsToPreload).catch(err => {
+                    console.error('React Query preload failed:', err);
+                });
+            }
         }
     }, [displayMessages, sandboxId, session?.access_token, preloadFiles]);
 
     return (
         <>
-            {displayMessages.length === 0 && !streamingTextContent && !streamingToolCall &&
+            {renderableMessages.length === 0 && !streamingTextContent && !streamingToolCall &&
                 !streamingText && !currentToolCall && agentStatus === 'idle' ? (
                 // Render empty state outside scrollable container
                 <div className="flex-1 min-h-[60vh] flex items-center justify-center">
@@ -597,7 +620,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                 let currentGroup: MessageGroup | null = null;
                                 let assistantGroupCounter = 0; // Counter for assistant groups
 
-                                displayMessages.forEach((message, index) => {
+                                renderableMessages.forEach((message, index) => {
                                     const messageType = message.type;
                                     const key = message.message_id || `msg-${index}`;
 

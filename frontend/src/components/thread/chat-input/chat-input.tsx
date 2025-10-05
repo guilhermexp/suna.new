@@ -8,7 +8,6 @@ import React, {
   useImperativeHandle,
   useCallback,
   useMemo,
-  memo,
 } from 'react';
 import { useAgents } from '@/hooks/react-query/agents/use-agents';
 import { useAgentSelection } from '@/lib/stores/agent-selection-store';
@@ -31,7 +30,6 @@ import { Brain, Zap, Workflow, Database, ArrowDown } from 'lucide-react';
 import { useComposioToolkitIcon } from '@/hooks/react-query/composio/use-composio';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TokenUsageDisplay } from '../token-usage-display';
-import { MovingBorder } from '@/components/ui/moving-border';
 
 import { IntegrationsRegistry } from '@/components/agents/integrations-registry';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -39,6 +37,7 @@ import { useSubscriptionData } from '@/contexts/SubscriptionContext';
 import { isLocalMode } from '@/lib/config';
 import { BillingModal } from '@/components/billing/billing-modal';
 import { AgentConfigurationDialog } from '@/components/agents/agent-configuration-dialog';
+import { safeJsonParse } from '@/components/thread/utils';
 import posthog from 'posthog-js';
 
 export type SubscriptionStatus = 'no_subscription' | 'active';
@@ -99,7 +98,7 @@ export interface UploadedFile {
 
 
 
-export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
+export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
   (
     {
       onSubmit,
@@ -448,16 +447,48 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
       let completionTokens = 0;
       let totalCost = 0;
 
-      messages.forEach((msg: any) => {
-        if (msg.content?.usage) {
-          promptTokens += msg.content.usage.prompt_tokens || 0;
-          completionTokens += msg.content.usage.completion_tokens || 0;
+      const toNumber = (value: unknown) => {
+        if (typeof value === 'number' && Number.isFinite(value)) return value;
+        if (typeof value === 'string') {
+          const parsed = parseFloat(value);
+          return Number.isFinite(parsed) ? parsed : 0;
         }
-        if (msg.estimated_cost) {
-          const cost = typeof msg.estimated_cost === 'string'
-            ? parseFloat(msg.estimated_cost)
-            : msg.estimated_cost;
-          if (!isNaN(cost)) totalCost += cost;
+        return 0;
+      };
+
+      messages.forEach((msg: any) => {
+        const content = safeJsonParse<Record<string, any>>(msg.content, {});
+        const metadata = safeJsonParse<Record<string, any>>(msg.metadata, {});
+
+        const usage =
+          (content && typeof content === 'object' && 'usage' in content
+            ? (content.usage as Record<string, unknown>)
+            : undefined) ||
+          (metadata && typeof metadata === 'object' && 'usage' in metadata
+            ? (metadata.usage as Record<string, unknown>)
+            : undefined) ||
+          (msg.usage && typeof msg.usage === 'object'
+            ? (msg.usage as Record<string, unknown>)
+            : undefined);
+
+        if (usage) {
+          promptTokens += toNumber(usage.prompt_tokens);
+          completionTokens += toNumber(usage.completion_tokens);
+        }
+
+        const estimatedCost =
+          toNumber(
+            (content && typeof content === 'object' && 'estimated_cost' in content
+              ? content.estimated_cost
+              : undefined) ??
+              (metadata && typeof metadata === 'object' && 'estimated_cost' in metadata
+                ? metadata.estimated_cost
+                : undefined) ??
+              msg.estimated_cost,
+          );
+
+        if (estimatedCost > 0) {
+          totalCost += estimatedCost;
         }
       });
 
@@ -596,13 +627,6 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
             }}
           >
             <div className="w-full text-sm flex flex-col justify-between items-start rounded-lg relative">
-              {isAgentRunning && (
-                <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none z-10">
-                  <MovingBorder duration={3000} rx="24" ry="24">
-                    <div className="h-20 w-20 opacity-[0.6] bg-[radial-gradient(circle,hsl(var(--primary))_40%,transparent_60%)]" />
-                  </MovingBorder>
-                </div>
-              )}
               <CardContent className={`w-full p-1.5 pb-2 ${bgColor} border rounded-3xl relative`}>
                 <AttachmentGroup
                   files={uploadedFiles || []}
@@ -724,6 +748,6 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
       </div>
     );
   },
-));
+);
 
 ChatInput.displayName = 'ChatInput';
