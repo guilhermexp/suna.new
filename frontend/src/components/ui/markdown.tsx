@@ -4,6 +4,7 @@ import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
 import { MermaidRenderer } from './mermaid-renderer';
 import { isMermaidCode } from '@/lib/mermaid-utils';
+import { ModernCodeBlock } from './modern-code-block';
 
 export type MarkdownProps = {
   children: string;
@@ -30,7 +31,7 @@ export const Markdown: React.FC<MarkdownProps> = React.memo(({
           code: ({ children, className }) => {
             const match = /language-(\w+)/.exec(className || '');
             const language = match ? match[1] : '';
-            const code = String(children);
+            const code = String(children).replace(/\n$/, ''); // Remove trailing newline
             const isInline = !className?.includes('language-');
 
             if (isInline) {
@@ -43,12 +44,14 @@ export const Markdown: React.FC<MarkdownProps> = React.memo(({
             }
 
             return (
-              <code className={cn('block bg-muted p-2 rounded text-xs font-mono overflow-x-auto', className)}>
-                {children}
-              </code>
+              <ModernCodeBlock
+                code={code}
+                language={language}
+                showHeader={true}
+              />
             );
           },
-          pre: ({ children }) => <pre className="bg-muted p-2 rounded text-xs font-mono overflow-x-auto mb-2">{children}</pre>,
+          pre: ({ children }) => <>{children}</>, // Let the code component handle pre styling
           blockquote: ({ children }) => <blockquote className="border-l-4 border-muted-foreground/20 pl-4 italic mb-2">{children}</blockquote>,
           strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
           em: ({ children }) => <em className="italic">{children}</em>,

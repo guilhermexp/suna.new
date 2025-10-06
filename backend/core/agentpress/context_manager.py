@@ -8,7 +8,7 @@ reaching the context window limitations of LLM models.
 import json
 from typing import List, Dict, Any, Optional, Union
 
-from litellm.utils import token_counter
+from core.utils.token_counter import safe_token_counter
 from core.services.supabase import DBConnection
 from core.utils.logger import logger
 from core.ai_models import model_manager
@@ -95,7 +95,7 @@ class ContextManager:
         This allows prompt caching (applied later) to produce cache hits on identical compressed content.
         """
         if uncompressed_total_token_count is None:
-            uncompressed_total_token_count = token_counter(model=llm_model, messages=messages)
+            uncompressed_total_token_count = safe_token_counter(model=llm_model, messages=messages)
 
         max_tokens_value = max_tokens or (100 * 1000)
 
@@ -106,7 +106,7 @@ class ContextManager:
                     continue  # Skip non-dict messages
                 if self.is_tool_result_message(msg):  # Only compress ToolResult messages
                     _i += 1  # Count the number of ToolResult messages
-                    msg_token_count = token_counter(messages=[msg])  # Count the number of tokens in the message
+                    msg_token_count = safe_token_counter(messages=[msg])  # Count the number of tokens in the message
                     if msg_token_count > token_threshold:  # If the message is too long
                         if _i > 1:  # If this is not the most recent ToolResult message
                             message_id = msg.get('message_id')  # Get the message_id
@@ -125,7 +125,7 @@ class ContextManager:
         This allows prompt caching (applied later) to produce cache hits on identical compressed content.
         """
         if uncompressed_total_token_count is None:
-            uncompressed_total_token_count = token_counter(model=llm_model, messages=messages)
+            uncompressed_total_token_count = safe_token_counter(model=llm_model, messages=messages)
 
         max_tokens_value = max_tokens or (100 * 1000)
 
@@ -136,7 +136,7 @@ class ContextManager:
                     continue  # Skip non-dict messages
                 if msg.get('role') == 'user':  # Only compress User messages
                     _i += 1  # Count the number of User messages
-                    msg_token_count = token_counter(messages=[msg])  # Count the number of tokens in the message
+                    msg_token_count = safe_token_counter(messages=[msg])  # Count the number of tokens in the message
                     if msg_token_count > token_threshold:  # If the message is too long
                         if _i > 1:  # If this is not the most recent User message
                             message_id = msg.get('message_id')  # Get the message_id
@@ -155,7 +155,7 @@ class ContextManager:
         This allows prompt caching (applied later) to produce cache hits on identical compressed content.
         """
         if uncompressed_total_token_count is None:
-            uncompressed_total_token_count = token_counter(model=llm_model, messages=messages)
+            uncompressed_total_token_count = safe_token_counter(model=llm_model, messages=messages)
 
         max_tokens_value = max_tokens or (100 * 1000)
         
@@ -166,7 +166,7 @@ class ContextManager:
                     continue  # Skip non-dict messages
                 if msg.get('role') == 'assistant':  # Only compress Assistant messages
                     _i += 1  # Count the number of Assistant messages
-                    msg_token_count = token_counter(messages=[msg])  # Count the number of tokens in the message
+                    msg_token_count = safe_token_counter(messages=[msg])  # Count the number of tokens in the message
                     if msg_token_count > token_threshold:  # If the message is too long
                         if _i > 1:  # If this is not the most recent Assistant message
                             message_id = msg.get('message_id')  # Get the message_id
@@ -239,9 +239,9 @@ class ContextManager:
             print("no actual_total_tokens")
             # Count conversation + system prompt WITHOUT caching
             if system_prompt:
-                uncompressed_total_token_count = token_counter(model=llm_model, messages=[system_prompt] + result)
+                uncompressed_total_token_count = safe_token_counter(model=llm_model, messages=[system_prompt] + result)
             else:
-                uncompressed_total_token_count = token_counter(model=llm_model, messages=result)
+                uncompressed_total_token_count = safe_token_counter(model=llm_model, messages=result)
             logger.info(f"Initial token count (no caching): {uncompressed_total_token_count}")
 
         # Apply compression
@@ -251,9 +251,9 @@ class ContextManager:
 
         # Recalculate WITHOUT caching overhead
         if system_prompt:
-            compressed_total = token_counter(model=llm_model, messages=[system_prompt] + result)
+            compressed_total = safe_token_counter(model=llm_model, messages=[system_prompt] + result)
         else:
-            compressed_total = token_counter(model=llm_model, messages=result)
+            compressed_total = safe_token_counter(model=llm_model, messages=result)
         
         logger.info(f"Context compression: {uncompressed_total_token_count} -> {compressed_total} token")
 
@@ -300,9 +300,9 @@ class ContextManager:
 
         # Early exit if no compression needed
         if system_prompt:
-            initial_token_count = token_counter(model=llm_model, messages=[system_prompt] + result)
+            initial_token_count = safe_token_counter(model=llm_model, messages=[system_prompt] + result)
         else:
-            initial_token_count = token_counter(model=llm_model, messages=result)
+            initial_token_count = safe_token_counter(model=llm_model, messages=result)
         
         max_allowed_tokens = max_tokens or (100 * 1000)
         
@@ -340,16 +340,16 @@ class ContextManager:
 
             # Recalculate token count
             messages_to_count = ([system_message] + conversation_messages) if system_message else conversation_messages
-            current_token_count = token_counter(model=llm_model, messages=messages_to_count)
+            current_token_count = safe_token_counter(model=llm_model, messages=messages_to_count)
 
         # Prepare final result - return only conversation messages (matches compress_messages pattern)
         final_messages = conversation_messages
         
         # Log with system prompt included for accurate token reporting
         if system_message:
-            final_token_count = token_counter(model=llm_model, messages=[system_message] + final_messages)
+            final_token_count = safe_token_counter(model=llm_model, messages=[system_message] + final_messages)
         else:
-            final_token_count = token_counter(model=llm_model, messages=final_messages)
+            final_token_count = safe_token_counter(model=llm_model, messages=final_messages)
         
         logger.info(f"Context compression (omit): {initial_token_count} -> {final_token_count} tokens ({len(messages)} -> {len(final_messages)} messages)")
             

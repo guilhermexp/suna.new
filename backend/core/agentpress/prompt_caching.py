@@ -36,6 +36,7 @@ Based on Anthropic documentation and mathematical optimization (Sept 2025).
 
 from typing import Dict, Any, List, Optional
 from core.utils.logger import logger
+from core.utils.token_counter import safe_token_counter
 
 
 def get_resolved_model_id(model_name: str) -> str:
@@ -70,9 +71,7 @@ def estimate_token_count(text: str, model: str = "claude-3-5-sonnet-20240620") -
         return 0
     
     try:
-        from litellm import token_counter
-        # Use LiteLLM's token counter with the specific model
-        return token_counter(model=model, text=str(text))
+        return safe_token_counter(model=model, text=str(text))
     except Exception as e:
         logger.warning(f"LiteLLM token counting failed: {e}, using fallback estimation")
         # Fallback to word-based estimation

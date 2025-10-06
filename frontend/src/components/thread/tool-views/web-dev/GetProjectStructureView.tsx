@@ -28,7 +28,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { LoadingState } from '../shared/LoadingState';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, AlertTriangle } from 'lucide-react';
-import { CodeBlockCode } from '@/components/ui/code-block';
+import { ModernCodeBlock } from '@/components/ui/modern-code-block';
 import { getLanguageFromFileName } from '../file-operation/_utils';
 import { constructHtmlPreviewUrl } from '@/lib/utils/url';
 import {
@@ -365,11 +365,13 @@ const FileExplorer: React.FC<{
                 </div>
               ) : fileContent ? (
                 <ScrollArea className="h-full w-full">
-                  <div>
-                    <CodeBlockCode 
-                      code={fileContent} 
+                  <div className="p-2">
+                    <ModernCodeBlock
+                      code={fileContent}
                       language={language}
-                      className="text-xs h-full"
+                      filename={selectedFile}
+                      showHeader={false}
+                      className="text-xs"
                     />
                   </div>
                 </ScrollArea>

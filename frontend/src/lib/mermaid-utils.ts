@@ -100,6 +100,69 @@ export function validateMermaidSyntax(code: string): { valid: boolean; error?: s
 }
 
 /**
+ * Sanitizes Mermaid syntax by fixing common errors
+ */
+export function sanitizeMermaidSyntax(code: string): string {
+  if (!code?.trim()) return code;
+
+  let sanitized = code;
+
+  // Split into lines for processing
+  const lines = sanitized.split('\n');
+  const processedLines = lines.map((line, index) => {
+    // Skip empty lines and diagram type declarations
+    if (!line.trim() || /^(graph|flowchart|sequenceDiagram|classDiagram|stateDiagram|erDiagram)/i.test(line.trim())) {
+      return line;
+    }
+
+    // Fix unclosed node labels with quotes: NodeID[" ... (missing "])
+    // This handles cases like: ChatPanel[" or Text Component["
+    let processedLine = line.replace(/(\w+)\["([^"\]]*?)$/g, (match, nodeId, text) => {
+      const cleanText = text.trim();
+      return `${nodeId}["${cleanText}"]`;
+    });
+
+    // Fix unclosed node labels without quotes: NodeID[ ... (missing ])
+    processedLine = processedLine.replace(/(\w+)\[([^\]"]*?)$/g, (match, nodeId, text) => {
+      // Don't fix if it's part of an arrow or special syntax
+      if (text.match(/^(--|->|=>|==>|\||<|>)/)) {
+        return match;
+      }
+      const cleanText = text.trim();
+      // Only fix if there's actual content
+      if (cleanText) {
+        return `${nodeId}[${cleanText}]`;
+      }
+      return match;
+    });
+
+    // Fix node labels that have opening quote but no closing quote
+    // Pattern: NodeID["text but no closing "
+    processedLine = processedLine.replace(/(\w+)\["([^"]*?)(?:\]|$)/g, (match, nodeId, text) => {
+      // If already properly closed, skip
+      if (match.endsWith('"]')) {
+        return match;
+      }
+      const cleanText = text.trim();
+      return `${nodeId}["${cleanText}"]`;
+    });
+
+    return processedLine;
+  });
+
+  sanitized = processedLines.join('\n');
+
+  // Final cleanup: remove duplicate markers
+  sanitized = sanitized.replace(/\]\s*\]\s*$/gm, ']');
+  sanitized = sanitized.replace(/"\s*"\s*\]/g, '"]');
+
+  // Fix lines that have [" at the end with nothing after
+  sanitized = sanitized.replace(/\["\s*$/gm, '');
+
+  return sanitized;
+}
+
+/**
  * Extracts and processes Mermaid diagrams from markdown content
  */
 export function extractMermaidDiagrams(content: string): Array<{
@@ -122,11 +185,11 @@ export function extractMermaidDiagrams(content: string): Array<{
 
   while ((match = codeBlockRegex.exec(content)) !== null) {
     const [original, language = '', code] = match;
-    
+
     if (isMermaidCode(language, code)) {
       diagrams.push({
         original,
-        code: code.trim(),
+        code: sanitizeMermaidSyntax(code.trim()),
         language: language || 'mermaid',
         index
       });

@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { CodeRenderer } from './code-renderer';
 import { useImageContent } from '@/hooks/use-image-content';
 import { MermaidRenderer } from '@/components/ui/mermaid-renderer';
+import { ModernCodeBlock } from '@/components/ui/modern-code-block';
 import { isMermaidCode } from '@/lib/mermaid-utils';
 import type { FileRendererProject } from './index';
 
@@ -222,9 +223,10 @@ export const MarkdownRenderer = forwardRef<
               }
 
               return (
-                <CodeRenderer
-                  content={code}
+                <ModernCodeBlock
+                  code={code}
                   language={language}
+                  showHeader={true}
                 />
               );
             },
@@ -266,8 +268,8 @@ export const MarkdownRenderer = forwardRef<
                 basePath={basePath}
               />
             ),
-            pre: ({ node, ...props }) => (
-              <pre className="p-0 my-2 bg-transparent" {...props} />
+            pre: ({ node, children, ...props }) => (
+              <>{children}</>
             ),
             table: ({ node, ...props }) => (
               <table

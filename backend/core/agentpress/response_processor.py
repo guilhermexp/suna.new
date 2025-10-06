@@ -26,7 +26,7 @@ from core.utils.json_helpers import (
     ensure_dict, ensure_list, safe_json_parse, 
     to_json_string, format_for_yield
 )
-from litellm import token_counter
+from core.utils.token_counter import safe_token_counter
 
 # Type alias for XML result adding strategy
 XmlAddingStrategy = Literal["user_message", "assistant_message", "inline_edit"]
@@ -124,8 +124,8 @@ class ResponseProcessor:
         This is critical for billing on timeouts, crashes, disconnects, etc.
         """
         try:
-            prompt_tokens = token_counter(model=llm_model, messages=prompt_messages)
-            completion_tokens = token_counter(model=llm_model, text=accumulated_content) if accumulated_content else 0
+            prompt_tokens = safe_token_counter(model=llm_model, messages=prompt_messages)
+            completion_tokens = safe_token_counter(model=llm_model, text=accumulated_content) if accumulated_content else 0
             
             logger.warning(f"⚠️ ESTIMATED TOKEN USAGE (no exact data): prompt={prompt_tokens}, completion={completion_tokens}")
             
