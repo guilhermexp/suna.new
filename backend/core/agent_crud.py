@@ -7,7 +7,6 @@ from core.utils.config import config, EnvMode
 from core.utils.pagination import PaginationParams
 from core.utils.core_tools_helper import ensure_core_tools_enabled
 from core.ai_models import model_manager
-
 from .api_models import (
     AgentUpdateRequest, AgentResponse, AgentVersionResponse, AgentsResponse, 
     PaginationInfo, AgentCreateRequest, AgentIconGenerationRequest, AgentIconGenerationResponse
@@ -40,48 +39,72 @@ async def update_agent(
         
         existing_data = existing_agent.data
 
-        agent_metadata = existing_data.get('metadata', {})
-        is_suna_agent = agent_metadata.get('is_suna_default', False)
-        restrictions = agent_metadata.get('restrictions', {})
-        
-        if is_suna_agent:
-            logger.warning(f"Update attempt on Suna default agent {agent_id} by user {user_id}")
-            
-            if (agent_data.name is not None and 
-                agent_data.name != existing_data.get('name') and 
-                restrictions.get('name_editable') == False):
-                logger.error(f"User {user_id} attempted to modify restricted name of Suna agent {agent_id}")
+        agent_metadata = existing_data.get('metadata', {}) or {}
+        central_definition = get_central_agent_definition(agent_metadata)
+        is_centrally_managed = bool(central_definition or agent_metadata.get('centrally_managed'))
+        restrictions = get_default_restrictions(agent_metadata)
+        metadata_restrictions = agent_metadata.get('restrictions')
+        if isinstance(metadata_restrictions, dict):
+            restrictions.update(metadata_restrictions)
+
+        if is_centrally_managed:
+            agent_label = central_definition.name if central_definition else existing_data.get('name', 'Centrally managed agent')
+            logger.warning(f"Update attempt on centrally managed agent {agent_id} by user {user_id}")
+
+            if (
+                agent_data.name is not None
+                and agent_data.name != existing_data.get('name')
+                and restrictions.get('name_editable') is False
+            ):
+                logger.error(f"User {user_id} attempted to modify restricted name of agent {agent_id}")
                 raise HTTPException(
-                    status_code=403, 
-                    detail="Suna's name cannot be modified. This restriction is managed centrally."
+                    status_code=403,
+                    detail=f"{agent_label}'s name cannot be modified. This agent is centrally managed."
                 )
-            
-            
-            if (agent_data.system_prompt is not None and 
-                restrictions.get('system_prompt_editable') == False):
-                logger.error(f"User {user_id} attempted to modify restricted system prompt of Suna agent {agent_id}")
+
+            if (
+                agent_data.description is not None
+                and agent_data.description != existing_data.get('description')
+                and restrictions.get('description_editable') is False
+            ):
+                logger.error(f"User {user_id} attempted to modify restricted description of agent {agent_id}")
                 raise HTTPException(
-                    status_code=403, 
-                    detail="Suna's system prompt cannot be modified. This is managed centrally to ensure optimal performance."
+                    status_code=403,
+                    detail=f"{agent_label}'s description cannot be modified. This agent is centrally managed."
                 )
-            
-            if (agent_data.agentpress_tools is not None and 
-                restrictions.get('tools_editable') == False):
-                logger.error(f"User {user_id} attempted to modify restricted tools of Suna agent {agent_id}")
+
+            if (
+                agent_data.system_prompt is not None
+                and restrictions.get('system_prompt_editable') is False
+            ):
+                logger.error(f"User {user_id} attempted to modify restricted system prompt of agent {agent_id}")
                 raise HTTPException(
-                    status_code=403, 
-                    detail="Suna's default tools cannot be modified. These tools are optimized for Suna's capabilities."
+                    status_code=403,
+                    detail=f"{agent_label}'s system prompt cannot be modified. This agent is centrally managed."
                 )
-            
-            if ((agent_data.configured_mcps is not None or agent_data.custom_mcps is not None) and 
-                restrictions.get('mcps_editable') == False):
-                logger.error(f"User {user_id} attempted to modify restricted MCPs of Suna agent {agent_id}")
+
+            if (
+                agent_data.agentpress_tools is not None
+                and restrictions.get('tools_editable') is False
+            ):
+                logger.error(f"User {user_id} attempted to modify restricted tools of agent {agent_id}")
                 raise HTTPException(
-                    status_code=403, 
-                    detail="Suna's integrations cannot be modified."
+                    status_code=403,
+                    detail=f"{agent_label}'s tool configuration is centrally managed and cannot be modified."
                 )
-            
-            logger.debug(f"Suna agent update validation passed for agent {agent_id} by user {user_id}")
+
+            if (
+                (agent_data.configured_mcps is not None or agent_data.custom_mcps is not None)
+                and restrictions.get('mcps_editable') is False
+            ):
+                logger.error(f"User {user_id} attempted to modify restricted MCPs of agent {agent_id}")
+                raise HTTPException(
+                    status_code=403,
+                    detail=f"{agent_label}'s integrations are centrally managed and cannot be modified."
+                )
+
+            logger.debug(f"Centrally managed agent update validation passed for agent {agent_id} by user {user_id}")
+
 
         current_version_data = None
         if existing_data.get('current_version_id'):
@@ -426,10 +449,13 @@ async def delete_agent(agent_id: str, user_id: str = Depends(verify_and_get_user
         
         if agent['is_default']:
             raise HTTPException(status_code=400, detail="Cannot delete default agent")
-        
-        if agent.get('metadata', {}).get('is_suna_default', False):
-            raise HTTPException(status_code=400, detail="Cannot delete Suna default agent")
-        
+
+        metadata = agent.get('metadata', {}) or {}
+        central_definition = get_central_agent_definition(metadata)
+        if central_definition or metadata.get('centrally_managed'):
+            agent_label = central_definition.name if central_definition else agent.get('name', 'centrally managed agent')
+            raise HTTPException(status_code=400, detail=f"Cannot delete centrally managed agent '{agent_label}'")
+
         # Clean up triggers before deleting agent to ensure proper remote cleanup
         try:
             from core.triggers.trigger_service import get_trigger_service

@@ -1,21 +1,26 @@
 #!/usr/bin/env python3
 """
-Suna Default Agent Management Script (Simplified)
+Centrally Managed Agent Management Script
 
-This script provides administrative functions for managing Suna default agents across all users.
+This script provides administrative functions for managing Suna and Claude Code CLI centrally managed agents across all users.
 
 Usage:
     # 🚀 MAIN COMMANDS
-    python manage_suna_agents.py install-all          # Install Suna for all users who don't have it
-    python manage_suna_agents.py stats                # Show Suna agent statistics
-    python manage_suna_agents.py install-user <id>    # Install Suna for specific user
+    python manage_suna_agents.py install-all             # Install Suna for all users who don't have it
+    python manage_suna_agents.py install-claude-all      # Install Claude Code CLI agent for all users
+    python manage_suna_agents.py stats                   # Show Suna agent statistics
+    python manage_suna_agents.py claude-stats            # Show Claude Code CLI agent statistics
+    python manage_suna_agents.py install-user <id>       # Install Suna agent for specific user
+    python manage_suna_agents.py install-claude-user <id> # Install Claude Code CLI agent for specific user
 
 Examples:
     python manage_suna_agents.py install-all
+    python manage_suna_agents.py install-claude-all
     python manage_suna_agents.py stats
+    python manage_suna_agents.py claude-stats
     python manage_suna_agents.py install-user 123e4567-e89b-12d3-a456-426614174000
 
-Note: Sync is no longer needed - Suna agents automatically use the current configuration from config.py
+Note: Sync is no longer needed - centrally managed agents automatically use their current configuration.
 """
 
 import asyncio
@@ -29,6 +34,7 @@ backend_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(backend_dir))
 
 from core.utils.suna_default_agent_service import SunaDefaultAgentService
+from core.utils.claude_code_agent_service import ClaudeCodeAgentService
 from core.services.supabase import DBConnection
 from core.utils.logger import logger
 
@@ -47,12 +53,14 @@ class SunaAgentManager:
         print(f"   📦 Installed: {result['installed_count']}")
         print(f"   ❌ Failed: {result['failed_count']}")
         
-        if result['failed_count'] > 0:
-            print("\n❌ Failed installations:")
+        if result.get('details'):
+            if result['failed_count'] > 0:
+                print('\n❌ Installation details:')
+            elif result['installed_count'] > 0:
+                print('\nℹ️  Installation details:')
             for detail in result['details']:
-                if detail['status'] == 'failed':
-                    print(f"   - User {detail['account_id']}: {detail.get('error', 'Unknown error')}")
-        
+                print(f"   - {detail}")
+
         if result['installed_count'] > 0:
             print(f"\n✅ Successfully installed Suna for {result['installed_count']} users")
             
@@ -116,9 +124,48 @@ class SunaAgentManager:
                 print(f"  {month}: {count} agents")
 
 
+
+
+class ClaudeCodeAgentManager:
+    def __init__(self):
+        self.service = ClaudeCodeAgentService()
+
+    async def install_all_users(self):
+        print('Installing Claude Code CLI agent for all users who do not have it...')
+        result = await self.service.install_for_all_users()
+        print('Installation completed!')
+        print(f"   Installed: {result['installed_count']}")
+        print(f"   Failed: {result['failed_count']}")
+        print(f"   Remaining without agent: {result.get('total_missing', 0)}")
+        if result.get('details'):
+            print('Details:')
+            for detail in result.get('details', []):
+                print(f"   - {detail}")
+
+    async def install_user(self, account_id: str):
+        print(f"Installing Claude Code CLI agent for user {account_id}...")
+        agent_id = await self.service.ensure_agent_for_user(account_id)
+        if agent_id:
+            print(f"Installed Claude Code CLI agent {agent_id} for user {account_id}")
+        else:
+            print(f"Failed to install Claude Code CLI agent for user {account_id}")
+
+    async def replace_user_agent(self, account_id: str):
+        print(f"Replacing Claude Code CLI agent for user {account_id}...")
+        agent_id = await self.service.ensure_agent_for_user(account_id, replace_existing=True)
+        if agent_id:
+            print(f"Replaced Claude Code CLI agent {agent_id} for user {account_id}")
+        else:
+            print(f"Failed to replace Claude Code CLI agent for user {account_id}")
+
+    async def show_stats(self):
+        stats = await self.service.get_stats()
+        print('Claude Code CLI Agent Statistics')
+        print('=' * 50)
+        print(f"Total Agents: {stats.get('total_agents', 0)}")
 async def main():
     parser = argparse.ArgumentParser(
-        description="Manage Suna default agents across all users (Simplified)",
+        description="Manage centrally managed agents (Suna and Claude Code CLI)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__
     )
@@ -127,7 +174,9 @@ async def main():
     
     # Main commands
     subparsers.add_parser('install-all', help='Install Suna agent for all users who don\'t have it')
+    subparsers.add_parser('install-claude-all', help='Install Claude Code CLI agent for all users who don\'t have it')
     subparsers.add_parser('stats', help='Show Suna agent statistics')
+    subparsers.add_parser('claude-stats', help='Show Claude Code CLI agent statistics')
     subparsers.add_parser('config-info', help='Show information about Suna configuration')
     
     # User-specific commands
@@ -136,6 +185,12 @@ async def main():
     
     replace_user_parser = subparsers.add_parser('replace-user', help='Replace Suna agent for specific user (if corrupted)')
     replace_user_parser.add_argument('account_id', help='Account ID to replace Suna for')
+    
+    install_claude_parser = subparsers.add_parser('install-claude-user', help='Install Claude Code CLI agent for specific user')
+    install_claude_parser.add_argument('account_id', help='Account ID to install the Claude Code CLI agent for')
+    
+    replace_claude_parser = subparsers.add_parser('replace-claude-user', help='Replace Claude Code CLI agent for specific user')
+    replace_claude_parser.add_argument('account_id', help='Account ID to replace the Claude Code CLI agent for')
     
     # Legacy commands (deprecated but still functional)
     subparsers.add_parser('sync', help='[DEPRECATED] No longer needed - config is always current')
@@ -147,25 +202,34 @@ async def main():
         parser.print_help()
         return
     
-    manager = SunaAgentManager()
-    
+    suna_manager = SunaAgentManager()
+    claude_manager = ClaudeCodeAgentManager()
+
     try:
         if args.command == 'install-all':
-            await manager.install_all_users()
+            await suna_manager.install_all_users()
+        elif args.command == 'install-claude-all':
+            await claude_manager.install_all_users()
         elif args.command == 'stats':
-            await manager.show_stats()
+            await suna_manager.show_stats()
+        elif args.command == 'claude-stats':
+            await claude_manager.show_stats()
         elif args.command == 'config-info':
-            await manager.update_config_info()
+            await suna_manager.update_config_info()
         elif args.command == 'install-user':
-            await manager.install_user(args.account_id)
+            await suna_manager.install_user(args.account_id)
+        elif args.command == 'install-claude-user':
+            await claude_manager.install_user(args.account_id)
         elif args.command == 'replace-user':
-            await manager.replace_user_agent(args.account_id)
+            await suna_manager.replace_user_agent(args.account_id)
+        elif args.command == 'replace-claude-user':
+            await claude_manager.replace_user_agent(args.account_id)
         elif args.command == 'sync':
             print("⚠️  DEPRECATED: Sync is no longer needed!")
-            await manager.update_config_info()
+            await suna_manager.update_config_info()
         elif args.command == 'update-all':
             print("⚠️  DEPRECATED: Update-all is no longer needed!")
-            await manager.update_config_info()
+            await suna_manager.update_config_info()
         else:
             parser.print_help()
             
