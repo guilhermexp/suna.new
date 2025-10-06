@@ -86,7 +86,7 @@ class ProcessorConfig:
 
 class ResponseProcessor:
     """Processes LLM responses, extracting and executing tool calls."""
-    
+
     def __init__(self, tool_registry: ToolRegistry, add_message_callback: Callable, trace: Optional[StatefulTraceClient] = None, agent_config: Optional[dict] = None):
         """Initialize the ResponseProcessor.
         
@@ -108,6 +108,201 @@ class ResponseProcessor:
         self.is_agent_builder = False  # Deprecated - keeping for compatibility
         self.target_agent_id = None  # Deprecated - keeping for compatibility
         self.agent_config = agent_config
+
+    def _is_anthropic_tool_model(self, model_name: str) -> bool:
+        """Check if a model should be treated with Anthropic-native tool handling."""
+        if not model_name:
+            return False
+        lowered = model_name.lower()
+        return any(keyword in lowered for keyword in ["anthropic", "claude", "302ai", "bedrock/converse"])
+
+    def _normalize_content_block(self, block: Any) -> Optional[Dict[str, Any]]:
+        """Normalize streaming content blocks to dictionaries for easier processing."""
+        if block is None:
+            return None
+        if isinstance(block, dict):
+            return block
+        if isinstance(block, str):
+            return {"type": "text", "text": block}
+        for attr in ("model_dump", "dict"):
+            if hasattr(block, attr):
+                try:
+                    return getattr(block, attr)()
+                except Exception:
+                    continue
+        if hasattr(block, "__dict__"):
+            try:
+                return {k: getattr(block, k) for k in vars(block) if not k.startswith("_")}
+            except Exception:
+                return None
+        return None
+
+    def _append_partial_json(self, entry: Dict[str, Any], chunk: str) -> Optional[Any]:
+        """Accumulate partial JSON fragments and parse when complete."""
+        if chunk is None:
+            return None
+        chunk_str = str(chunk)
+        partial_chunks = entry.setdefault("partial_chunks", [])
+        if not partial_chunks or partial_chunks[-1] != chunk_str:
+            partial_chunks.append(chunk_str)
+        combined = "".join(partial_chunks)
+        try:
+            parsed = json.loads(combined)
+            entry["partial_chunks"] = []
+            entry.pop("partial_json", None)
+            return parsed
+        except json.JSONDecodeError:
+            entry["partial_json"] = combined
+            return None
+
+    def _parse_tool_input_data(self, input_data: Any, entry: Dict[str, Any]) -> Optional[Any]:
+        """Parse tool input data emitted by Anthropic models."""
+        if isinstance(input_data, (dict, list, int, float, bool)):
+            return input_data
+        if isinstance(input_data, str):
+            stripped = input_data.strip()
+            if not stripped:
+                return None
+            parsed = safe_json_parse(stripped, None)
+            if parsed is not None and parsed is not stripped:
+                return parsed
+            try:
+                return json.loads(stripped)
+            except json.JSONDecodeError:
+                return self._append_partial_json(entry, stripped)
+        return None
+
+    def _maybe_collect_tool_call(
+        self,
+        tool_id: str,
+        state: Dict[str, Any],
+        entry: Dict[str, Any],
+        collected_calls: List[Dict[str, Any]],
+    ) -> None:
+        """Collect completed tool calls for Anthropic-native responses."""
+        if entry.get("arguments") is None:
+            return
+
+        completed_ids = state.setdefault("completed_ids", set())
+        if tool_id in completed_ids:
+            return
+
+        id_to_index = state.setdefault("id_to_index", {})
+        if tool_id in id_to_index:
+            tool_index = id_to_index[tool_id]
+        else:
+            tool_index = state.get("next_index", 0)
+            id_to_index[tool_id] = tool_index
+            state["next_index"] = tool_index + 1
+
+        tool_name = entry.get("name") or entry.get("function_name") or "unknown_tool"
+        arguments = entry.get("arguments")
+        collected_calls.append(
+            {
+                "id": tool_id,
+                "index": tool_index,
+                "name": tool_name,
+                "arguments": arguments,
+                "arguments_json": to_json_string(arguments),
+            }
+        )
+        completed_ids.add(tool_id)
+
+    def _process_anthropic_content(
+        self,
+        content: Any,
+        state: Optional[Dict[str, Any]] = None,
+    ) -> Tuple[str, List[Dict[str, Any]]]:
+        """Process Anthropic streaming content blocks for text and tool calls."""
+        if state is None:
+            state = {}
+
+        buffers = state.setdefault("buffers", {})
+        state.setdefault("id_to_index", {})
+        state.setdefault("next_index", 0)
+        state.setdefault("completed_ids", set())
+
+        text_output = ""
+        collected_calls: List[Dict[str, Any]] = []
+
+        blocks: List[Any]
+        if isinstance(content, (list, tuple)):
+            blocks = list(content)
+        else:
+            blocks = [content]
+
+        for raw_block in blocks:
+            if raw_block is None:
+                continue
+            if isinstance(raw_block, str):
+                text_output += raw_block
+                continue
+
+            block = self._normalize_content_block(raw_block)
+            if not block:
+                continue
+
+            block_type = block.get("type")
+
+            if block_type in {"text", "text_delta", "output_text_delta", "thinking", "reasoning"}:
+                text_value = block.get("text")
+                if text_value is None and isinstance(block.get("delta"), dict):
+                    text_value = block["delta"].get("text")
+                if isinstance(text_value, list):
+                    text_value = "".join(str(item) for item in text_value)
+                if isinstance(text_value, str):
+                    text_output += text_value
+                continue
+
+            if block_type == "tool_use":
+                tool_id = block.get("id") or block.get("tool_use_id")
+                if not tool_id:
+                    continue
+                entry = buffers.setdefault(tool_id, {"partial_chunks": []})
+                if block.get("name"):
+                    entry["name"] = block["name"]
+
+                input_data = block.get("input")
+                if input_data not in (None, ""):
+                    parsed_input = self._parse_tool_input_data(input_data, entry)
+                    if parsed_input is not None:
+                        entry["arguments"] = parsed_input
+                        entry["partial_chunks"] = []
+                        entry.pop("partial_json", None)
+
+                delta_info = block.get("delta")
+                if isinstance(delta_info, dict) and delta_info.get("partial_json"):
+                    parsed_input = self._append_partial_json(entry, delta_info.get("partial_json"))
+                    if parsed_input is not None:
+                        entry["arguments"] = parsed_input
+
+                self._maybe_collect_tool_call(tool_id, state, entry, collected_calls)
+                continue
+
+            if block_type in {"input_json_delta", "tool_input_delta", "tool_use_delta", "input_delta"}:
+                tool_id = block.get("id") or block.get("tool_use_id")
+                if not tool_id:
+                    continue
+                entry = buffers.setdefault(tool_id, {"partial_chunks": []})
+
+                partial_json = block.get("partial_json")
+                if not partial_json and isinstance(block.get("delta"), dict):
+                    partial_json = block["delta"].get("partial_json")
+                if partial_json:
+                    parsed_input = self._append_partial_json(entry, partial_json)
+                    if parsed_input is not None:
+                        entry["arguments"] = parsed_input
+
+                if block.get("name"):
+                    entry["name"] = block["name"]
+
+                self._maybe_collect_tool_call(tool_id, state, entry, collected_calls)
+                continue
+
+            if isinstance(block.get("text"), str):
+                text_output += block["text"]
+
+        return text_output, collected_calls
 
     async def _yield_message(self, message_obj: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
         """Helper to yield a message with proper formatting.
@@ -282,7 +477,19 @@ class ResponseProcessor:
         # Reuse thread_run_id for auto-continue or create new one
         thread_run_id = continuous_state.get('thread_run_id') or str(uuid.uuid4())
         continuous_state['thread_run_id'] = thread_run_id
-        
+
+        is_anthropic_native = config.native_tool_calling and self._is_anthropic_tool_model(llm_model)
+        anthropic_state = None
+        if is_anthropic_native:
+            anthropic_state = {
+                "buffers": {},
+                "id_to_index": {},
+                "next_index": 0,
+                "completed_ids": set(),
+                "yielded_ids": set(),
+                "scheduled_ids": set(),
+            }
+
         # CRITICAL: Generate unique ID for THIS specific LLM call (not per thread run)
         llm_response_id = str(uuid.uuid4())
         logger.info(f"🔵 LLM CALL #{auto_continue_count + 1} starting - llm_response_id: {llm_response_id}")
@@ -370,16 +577,22 @@ class ResponseProcessor:
                         accumulated_content += reasoning_content
 
                     # Process content chunk
+                    chunk_text = ""
+                    anthropic_updates: List[Dict[str, Any]] = []
                     if delta and hasattr(delta, 'content') and delta.content:
-                        chunk_content = delta.content
-                        # logger.debug(f"Processing chunk_content: type={type(chunk_content)}, value={chunk_content}")
-                        if isinstance(chunk_content, list):
-                            chunk_content = ''.join(str(item) for item in chunk_content)
-                        # print(chunk_content, end='', flush=True)
-                        # logger.debug(f"About to concatenate chunk_content (type={type(chunk_content)}) to accumulated_content (type={type(accumulated_content)})")
-                        accumulated_content += chunk_content
-                        # logger.debug(f"About to concatenate chunk_content (type={type(chunk_content)}) to current_xml_content (type={type(current_xml_content)})")
-                        current_xml_content += chunk_content
+                        if is_anthropic_native and anthropic_state is not None:
+                            chunk_text, anthropic_updates = self._process_anthropic_content(delta.content, anthropic_state)
+                        else:
+                            chunk_content = delta.content
+                            if isinstance(chunk_content, list):
+                                chunk_content = ''.join(str(item) for item in chunk_content)
+                            elif isinstance(chunk_content, dict):
+                                chunk_content = json.dumps(chunk_content)
+                            chunk_text = str(chunk_content)
+
+                    if chunk_text:
+                        accumulated_content += chunk_text
+                        current_xml_content += chunk_text
 
                         if not (config.max_xml_tool_calls > 0 and xml_tool_call_count >= config.max_xml_tool_calls):
                             # Yield ONLY content chunk (don't save)
@@ -388,13 +601,12 @@ class ResponseProcessor:
                                 "sequence": __sequence,
                                 "message_id": None, "thread_id": thread_id, "type": "assistant",
                                 "is_llm_message": True,
-                                "content": to_json_string({"role": "assistant", "content": chunk_content}),
+                                "content": to_json_string({"role": "assistant", "content": chunk_text}),
                                 "metadata": to_json_string({"stream_status": "chunk", "thread_run_id": thread_run_id}),
                                 "created_at": now_chunk, "updated_at": now_chunk
                             }
                             __sequence += 1
                         else:
-                            # logger.debug("XML tool call limit reached - not yielding more content chunks")
                             self.trace.event(name="xml_tool_call_limit_reached", level="DEFAULT", status_message=(f"XML tool call limit reached - not yielding more content chunks"))
 
                         # --- Process XML Tool Calls (if enabled and limit not reached) ---
@@ -413,10 +625,9 @@ class ResponseProcessor:
                                     )
 
                                     if config.execute_tools and config.execute_on_stream:
-                                        # Save and Yield tool_started status
                                         started_msg_obj = await self._yield_and_save_tool_started(context, thread_id, thread_run_id)
                                         if started_msg_obj: yield format_for_yield(started_msg_obj)
-                                        yielded_tool_indices.add(tool_index) # Mark status as yielded
+                                        yielded_tool_indices.add(tool_index)
 
                                         execution_task = asyncio.create_task(self._execute_tool(tool_call))
                                         pending_tool_executions.append({
@@ -428,10 +639,82 @@ class ResponseProcessor:
                                     if config.max_xml_tool_calls > 0 and xml_tool_call_count >= config.max_xml_tool_calls:
                                         logger.info(f"Reached XML tool call limit ({config.max_xml_tool_calls})")
                                         finish_reason = "xml_tool_limit_reached"
-                                        break # Stop processing more XML chunks in this delta
+                                        break
+
+                    if anthropic_updates and anthropic_state is not None:
+                        yielded_ids = anthropic_state.setdefault("yielded_ids", set())
+                        scheduled_ids = anthropic_state.setdefault("scheduled_ids", set())
+                        for update in anthropic_updates:
+                            tool_calls_buffer[update["index"]] = {
+                                "id": update["id"],
+                                "function": {
+                                    "name": update["name"],
+                                    "arguments": update["arguments_json"],
+                                },
+                            }
+
+                            if update["id"] not in yielded_ids:
+                                now_tool_chunk = datetime.now(timezone.utc).isoformat()
+                                yield {
+                                    "message_id": None,
+                                    "thread_id": thread_id,
+                                    "type": "status",
+                                    "is_llm_message": True,
+                                    "content": to_json_string({
+                                        "role": "assistant",
+                                        "status_type": "tool_call_chunk",
+                                        "tool_call_chunk": {
+                                            "id": update["id"],
+                                            "index": update["index"],
+                                            "type": "function",
+                                            "function": {
+                                                "name": update["name"],
+                                                "arguments": update["arguments_json"],
+                                            },
+                                        },
+                                    }),
+                                    "metadata": to_json_string({"thread_run_id": thread_run_id}),
+                                    "created_at": now_tool_chunk,
+                                    "updated_at": now_tool_chunk,
+                                }
+                                yielded_ids.add(update["id"])
+
+                            if config.execute_tools and config.execute_on_stream and update["id"] not in scheduled_ids:
+                                arguments_for_exec = update["arguments"]
+                                if not isinstance(arguments_for_exec, (dict, list)):
+                                    parsed_args = safe_json_parse(arguments_for_exec, None)
+                                    if isinstance(parsed_args, (dict, list)):
+                                        arguments_for_exec = parsed_args
+                                    else:
+                                        arguments_for_exec = {}
+
+                                tool_call_data = {
+                                    "function_name": update["name"],
+                                    "arguments": arguments_for_exec,
+                                    "id": update["id"],
+                                }
+                                current_assistant_id = last_assistant_message_object['message_id'] if last_assistant_message_object else None
+                                context = self._create_tool_context(
+                                    tool_call_data, tool_index, current_assistant_id
+                                )
+
+                                started_msg_obj = await self._yield_and_save_tool_started(context, thread_id, thread_run_id)
+                                if started_msg_obj:
+                                    yield format_for_yield(started_msg_obj)
+                                yielded_tool_indices.add(tool_index)
+
+                                execution_task = asyncio.create_task(self._execute_tool(tool_call_data))
+                                pending_tool_executions.append({
+                                    "task": execution_task,
+                                    "tool_call": tool_call_data,
+                                    "tool_index": tool_index,
+                                    "context": context,
+                                })
+                                scheduled_ids.add(update["id"])
+                                tool_index += 1
 
                     # --- Process Native Tool Call Chunks ---
-                    if config.native_tool_calling and delta and hasattr(delta, 'tool_calls') and delta.tool_calls:
+                    if config.native_tool_calling and not is_anthropic_native and delta and hasattr(delta, 'tool_calls') and delta.tool_calls:
                         for tool_call_chunk in delta.tool_calls:
                             # Yield Native Tool Call Chunk (transient status, not saved)
                             # ... (safe extraction logic for tool_call_data_chunk) ...
@@ -666,7 +949,7 @@ class ResponseProcessor:
                          if parsed_result:
                              tool_call, parsing_details = parsed_result
                              # Avoid adding if already processed during streaming
-                             if not any(exec['tool_call'] == tool_call for exec in pending_tool_executions):
+                             if not any(execution['tool_call'] == tool_call for execution in pending_tool_executions):
                                  final_tool_calls_to_process.append(tool_call)
                                  parsed_xml_data.append({'tool_call': tool_call, 'parsing_details': parsing_details})
 
@@ -1048,6 +1331,7 @@ class ResponseProcessor:
         tool_result_message_objects = {}
         finish_reason = None
         native_tool_calls_for_message = []
+        is_anthropic_native = config.native_tool_calling and self._is_anthropic_tool_model(llm_model)
 
         try:
             # Save and Yield thread_run_start status message
@@ -1060,45 +1344,72 @@ class ResponseProcessor:
 
             # Extract finish_reason, content, tool calls
             if hasattr(llm_response, 'choices') and llm_response.choices:
-                 if hasattr(llm_response.choices[0], 'finish_reason'):
-                     finish_reason = llm_response.choices[0].finish_reason
-                     logger.debug(f"Non-streaming finish_reason: {finish_reason}")
-                     self.trace.event(name="non_streaming_finish_reason", level="DEFAULT", status_message=(f"Non-streaming finish_reason: {finish_reason}"))
-                 response_message = llm_response.choices[0].message if hasattr(llm_response.choices[0], 'message') else None
-                 if response_message:
-                     if hasattr(response_message, 'content') and response_message.content:
-                         content = response_message.content
-                         if config.xml_tool_calling:
-                             parsed_xml_data = self._parse_xml_tool_calls(content)
-                             if config.max_xml_tool_calls > 0 and len(parsed_xml_data) > config.max_xml_tool_calls:
-                                 # Truncate content and tool data if limit exceeded
-                                 # ... (Truncation logic similar to streaming) ...
-                                 if parsed_xml_data:
-                                     xml_chunks = self._extract_xml_chunks(content)[:config.max_xml_tool_calls]
-                                     if xml_chunks:
-                                         last_chunk = xml_chunks[-1]
-                                         last_chunk_pos = content.find(last_chunk)
-                                         if last_chunk_pos >= 0: content = content[:last_chunk_pos + len(last_chunk)]
-                                 parsed_xml_data = parsed_xml_data[:config.max_xml_tool_calls]
-                                 finish_reason = "xml_tool_limit_reached"
-                             all_tool_data.extend(parsed_xml_data)
+                if hasattr(llm_response.choices[0], 'finish_reason'):
+                    finish_reason = llm_response.choices[0].finish_reason
+                    logger.debug(f"Non-streaming finish_reason: {finish_reason}")
+                    self.trace.event(name="non_streaming_finish_reason", level="DEFAULT", status_message=(f"Non-streaming finish_reason: {finish_reason}"))
+                response_message = llm_response.choices[0].message if hasattr(llm_response.choices[0], 'message') else None
+                if response_message:
+                    if hasattr(response_message, 'content') and response_message.content is not None:
+                        raw_content = response_message.content
+                        if is_anthropic_native and isinstance(raw_content, (list, tuple)):
+                            text_content, anth_tool_calls = self._process_anthropic_content(raw_content, None)
+                            content = text_content
+                            for call in anth_tool_calls:
+                                arguments_for_exec = call["arguments"]
+                                if not isinstance(arguments_for_exec, (dict, list)):
+                                    parsed_args = safe_json_parse(arguments_for_exec, None)
+                                    if isinstance(parsed_args, (dict, list)):
+                                        arguments_for_exec = parsed_args
+                                    else:
+                                        arguments_for_exec = {}
 
-                     if config.native_tool_calling and hasattr(response_message, 'tool_calls') and response_message.tool_calls:
-                          for tool_call in response_message.tool_calls:
-                             if hasattr(tool_call, 'function'):
-                                 exec_tool_call = {
-                                     "function_name": tool_call.function.name,
-                                     "arguments": safe_json_parse(tool_call.function.arguments) if isinstance(tool_call.function.arguments, str) else tool_call.function.arguments,
-                                     "id": tool_call.id if hasattr(tool_call, 'id') else str(uuid.uuid4())
-                                 }
-                                 all_tool_data.append({"tool_call": exec_tool_call, "parsing_details": None})
-                                 native_tool_calls_for_message.append({
-                                     "id": exec_tool_call["id"], "type": "function",
-                                     "function": {
-                                         "name": tool_call.function.name,
-                                         "arguments": tool_call.function.arguments if isinstance(tool_call.function.arguments, str) else to_json_string(tool_call.function.arguments)
-                                     }
-                                 })
+                                exec_tool_call = {
+                                    "function_name": call["name"],
+                                    "arguments": arguments_for_exec,
+                                    "id": call["id"],
+                                }
+                                all_tool_data.append({"tool_call": exec_tool_call, "parsing_details": None})
+                                native_tool_calls_for_message.append({
+                                    "id": call["id"],
+                                    "type": "function",
+                                    "function": {
+                                        "name": call["name"],
+                                        "arguments": call["arguments_json"],
+                                    },
+                                })
+                        else:
+                            content = raw_content if isinstance(raw_content, str) else to_json_string(raw_content)
+                            if config.xml_tool_calling:
+                                parsed_xml_data = self._parse_xml_tool_calls(content)
+                                if config.max_xml_tool_calls > 0 and len(parsed_xml_data) > config.max_xml_tool_calls:
+                                    if parsed_xml_data:
+                                        xml_chunks = self._extract_xml_chunks(content)[:config.max_xml_tool_calls]
+                                        if xml_chunks:
+                                            last_chunk = xml_chunks[-1]
+                                            last_chunk_pos = content.find(last_chunk)
+                                            if last_chunk_pos >= 0:
+                                                content = content[:last_chunk_pos + len(last_chunk)]
+                                    parsed_xml_data = parsed_xml_data[:config.max_xml_tool_calls]
+                                    finish_reason = "xml_tool_limit_reached"
+                                all_tool_data.extend(parsed_xml_data)
+
+                    if config.native_tool_calling and not is_anthropic_native and hasattr(response_message, 'tool_calls') and response_message.tool_calls:
+                        for tool_call in response_message.tool_calls:
+                            if hasattr(tool_call, 'function'):
+                                exec_tool_call = {
+                                    "function_name": tool_call.function.name,
+                                    "arguments": safe_json_parse(tool_call.function.arguments) if isinstance(tool_call.function.arguments, str) else tool_call.function.arguments,
+                                    "id": tool_call.id if hasattr(tool_call, 'id') else str(uuid.uuid4())
+                                }
+                                all_tool_data.append({"tool_call": exec_tool_call, "parsing_details": None})
+                                native_tool_calls_for_message.append({
+                                    "id": exec_tool_call["id"], "type": "function",
+                                    "function": {
+                                        "name": tool_call.function.name,
+                                        "arguments": tool_call.function.arguments if isinstance(tool_call.function.arguments, str) else to_json_string(tool_call.function.arguments)
+                                    }
+                                })
 
 
             # --- SAVE and YIELD Final Assistant Message ---
