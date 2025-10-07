@@ -1,6 +1,6 @@
 # Workflow de Sincronização com Upstream
 
-**Última Sincronização:** 2025-10-04
+**Última Sincronização:** 2025-10-07
 **Upstream:** https://github.com/kortix-ai/suna.git
 
 ## 📋 Visão Geral
@@ -485,6 +485,15 @@ git log upstream/main --author="marko-kraemer" --oneline | head -20
 - **Arquivos modificados:** ~110 arquivos
 - **Customizações preservadas:** Billing LOCAL, 302.AI, Token Usage, Railway
 - **Resultado:** ✅ Sucesso - todas mudanças seguras aplicadas
+
+---
+
+## 💡 Lições Aprendidas
+
+### 2025-10-07 - AgentLoader e Workflow Removal
+- **Dependências entre commits:** Upstream criou `agent_loader.py` e depois modificou no commit de remoção de workflows. Aplicar commits dependentes fora de ordem causa conflitos.
+- **Solução:** Aplicar commits em sequência respeitando dependências (primeiro criar arquivo, depois modificar).
+- **Conflitos simples:** Remoção de features não usadas (workflows) gera conflitos mínimos e fáceis de resolver.
 
 ---
 
