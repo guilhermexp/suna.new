@@ -19,7 +19,6 @@ import { composioKeys } from '@/hooks/react-query/composio/keys';
 import { workflowKeys } from '@/hooks/react-query/agents/workflow-keys';
 import { knowledgeBaseKeys } from '@/hooks/react-query/knowledge-base/keys';
 import { fileQueryKeys } from '@/hooks/react-query/files/use-file-queries';
-import { threadKeys } from '@/hooks/react-query/threads/keys';
 
 interface ApiMessageType {
   message_id?: string;
@@ -232,6 +231,8 @@ export function useAgentStream(
       );
 
       const currentThreadId = threadIdRef.current; // Get current threadId from ref
+      const currentSetMessages = setMessagesRef.current; // Get current setMessages from ref
+
       // Only finalize if this is for the current run ID or if no specific run ID is provided
       if (
         runId &&
@@ -261,12 +262,6 @@ export function useAgentStream(
       queryClient.invalidateQueries({ 
         queryKey: fileQueryKeys.all,
       });
-
-      if (currentThreadId) {
-        queryClient.invalidateQueries({ queryKey: threadKeys.messages(currentThreadId) });
-        queryClient.invalidateQueries({ queryKey: threadKeys.agentRuns(currentThreadId) });
-        queryClient.invalidateQueries({ queryKey: threadKeys.details(currentThreadId) });
-      }
 
       if (agentId) {
         queryClient.invalidateQueries({ queryKey: agentKeys.detail(agentId) });

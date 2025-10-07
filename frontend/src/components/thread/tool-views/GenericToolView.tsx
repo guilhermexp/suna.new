@@ -17,7 +17,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from '@/components/ui/button';
 import { LoadingState } from './shared/LoadingState';
 import { toast } from 'sonner';
-import { ModernCodeBlock } from '@/components/ui/modern-code-block';
 
 export function GenericToolView({
   name = 'generic-tool',
@@ -29,37 +28,6 @@ export function GenericToolView({
   isStreaming = false,
 }: ToolViewProps) {
   const toolTitle = getToolTitle(name);
-
-  // Detect language from content
-  const detectLanguage = (content: string): string => {
-    if (!content) return 'text';
-
-    const trimmed = content.trim();
-
-    // Check for JSON
-    if ((trimmed.startsWith('{') && trimmed.endsWith('}')) ||
-        (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
-      try {
-        JSON.parse(trimmed);
-        return 'json';
-      } catch {
-        // Not valid JSON, continue checking
-      }
-    }
-
-    // Check for XML/HTML
-    if (trimmed.startsWith('<') && trimmed.endsWith('>')) {
-      return 'xml';
-    }
-
-    // Check for markdown
-    if (trimmed.includes('# ') || trimmed.includes('## ') || trimmed.includes('```')) {
-      return 'markdown';
-    }
-
-    // Default to plain text
-    return 'text';
-  };
 
   const formatContent = (content: any) => {
     if (!content) return null;
@@ -256,7 +224,7 @@ export function GenericToolView({
                       onClick={handleCopyInput}
                       disabled={isCopyingInput}
                       className="h-6 w-6 p-0"
-                      title="Copy content"
+                      title="Copy file content"
                     >
                       {isCopyingInput ? (
                         <Check className="h-3 w-3" />
@@ -265,12 +233,13 @@ export function GenericToolView({
                       )}
                     </Button>
                   </div>
-                  <ModernCodeBlock
-                    code={formattedAssistantContent}
-                    language={detectLanguage(formattedAssistantContent)}
-                    showHeader={false}
-                    className="text-xs"
-                  />
+                  <div className="border-muted bg-muted/20 rounded-lg overflow-hidden border">
+                    <div className="p-4">
+                      <pre className="text-xs text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap break-words font-mono">
+                        {formattedAssistantContent}
+                      </pre>
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -286,7 +255,7 @@ export function GenericToolView({
                       onClick={handleCopyOutput}
                       disabled={isCopyingOutput}
                       className="h-6 w-6 p-0"
-                      title="Copy content"
+                      title="Copy file content"
                     >
                       {isCopyingOutput ? (
                         <Check className="h-3 w-3" />
@@ -295,12 +264,13 @@ export function GenericToolView({
                       )}
                     </Button>
                   </div>
-                  <ModernCodeBlock
-                    code={formattedToolContent}
-                    language={detectLanguage(formattedToolContent)}
-                    showHeader={false}
-                    className="text-xs"
-                  />
+                  <div className="border-muted bg-muted/20 rounded-lg overflow-hidden border">
+                    <div className="p-4">
+                      <pre className="text-xs text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap break-words font-mono">
+                        {formattedToolContent}
+                      </pre>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

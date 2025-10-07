@@ -28,7 +28,6 @@ import { XlsxRenderer } from '@/components/file-renderers/xlsx-renderer';
 import { cn } from '@/lib/utils';
 import { useTheme } from 'next-themes';
 import { CodeBlockCode } from '@/components/ui/code-block';
-import { ModernCodeBlock } from '@/components/ui/modern-code-block';
 import { constructHtmlPreviewUrl } from '@/lib/utils/url';
 import {
   Card,

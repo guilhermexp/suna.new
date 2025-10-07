@@ -796,7 +796,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                         if (debugMode) {
                                             return (
                                                 <div key={group.key} className="flex justify-end">
-                                                    <div className="flex max-w-[75%] rounded-2xl bg-card px-3 py-2 break-words overflow-hidden">
+                                                    <div className="flex max-w-[85%] rounded-2xl bg-card px-4 py-3 break-words overflow-hidden">
                                                         <pre className="text-xs font-mono whitespace-pre-wrap overflow-x-auto min-w-0 flex-1">
                                                             {message.content}
                                                         </pre>
@@ -823,10 +823,10 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                                 {renderStandaloneAttachments(attachments as string[], handleOpenFileViewer, sandboxId, project, true)}
 
                                                 <div className="flex justify-end">
-                                                    <div className="flex max-w-[75%] rounded-3xl rounded-br-lg bg-card border px-3 py-2 break-words overflow-hidden">
-                                                        <div className="space-y-2 min-w-0 flex-1">
+                                                    <div className="flex max-w-[85%] rounded-3xl rounded-br-lg bg-card border px-4 py-3 break-words overflow-hidden">
+                                                        <div className="space-y-3 min-w-0 flex-1">
                                                             {cleanContent && (
-                                                                <ComposioUrlDetector content={cleanContent} className="text-[13px] leading-relaxed prose prose-sm dark:prose-invert chat-markdown max-w-none [&>:first-child]:mt-0 prose-headings:mt-3 break-words overflow-wrap-anywhere" />
+                                                                <ComposioUrlDetector content={cleanContent} className="text-sm leading-relaxed prose prose-sm dark:prose-invert chat-markdown max-w-none [&>:first-child]:mt-0 prose-headings:mt-3 break-words overflow-wrap-anywhere" />
                                                             )}
 
                                                             {/* Use the helper function to render regular (non-spreadsheet) attachments */}

@@ -147,7 +147,6 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
     const [pendingFiles, setPendingFiles] = useState<File[]>([]);
     const [isUploading, setIsUploading] = useState(false);
     const [isDraggingOver, setIsDraggingOver] = useState(false);
-    const [runElapsedMs, setRunElapsedMs] = useState(0);
 
     const [registryDialogOpen, setRegistryDialogOpen] = useState(false);
     const [showSnackbar, setShowSnackbar] = useState(defaultShowSnackbar);
@@ -207,9 +206,6 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
 
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const runTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-    const runStartRef = useRef<number | null>(null);
-    const previousRunningRef = useRef(isAgentRunning);
 
     const { data: agentsResponse } = useAgents({}, { enabled: isLoggedIn });
     const agents = agentsResponse?.agents || [];
@@ -258,43 +254,6 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
         textareaRef.current.focus();
       }
     }, [autoFocus]);
-
-    useEffect(() => {
-      if (isAgentRunning) {
-        if (!previousRunningRef.current) {
-          setRunElapsedMs(0);
-        }
-
-        if (runStartRef.current === null) {
-          runStartRef.current = Date.now();
-        }
-
-        if (!runTimerRef.current) {
-          runTimerRef.current = setInterval(() => {
-            if (runStartRef.current !== null) {
-              setRunElapsedMs(Date.now() - runStartRef.current);
-            }
-          }, 1000);
-        }
-      } else {
-        if (runTimerRef.current) {
-          clearInterval(runTimerRef.current);
-          runTimerRef.current = null;
-        }
-        runStartRef.current = null;
-      }
-
-      previousRunningRef.current = isAgentRunning;
-    }, [isAgentRunning]);
-
-    useEffect(() => {
-      return () => {
-        if (runTimerRef.current) {
-          clearInterval(runTimerRef.current);
-          runTimerRef.current = null;
-        }
-      };
-    }, []);
 
     const handleSubmit = useCallback(async (e: React.FormEvent) => {
       e.preventDefault();
@@ -566,23 +525,6 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
       return null as number | null;
     }, [messages]);
 
-    const formattedRunTime = useMemo(() => {
-      const totalSeconds = Math.max(0, Math.floor(runElapsedMs / 1000));
-      const hours = Math.floor(totalSeconds / 3600);
-      const minutes = Math.floor((totalSeconds % 3600) / 60);
-      const seconds = totalSeconds % 60;
-
-      if (hours > 0) {
-        return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds
-          .toString()
-          .padStart(2, '0')}`;
-      }
-
-      return `${minutes.toString().padStart(2, '0')}:${seconds
-        .toString()
-        .padStart(2, '0')}`;
-    }, [runElapsedMs]);
-
     const renderControls = useMemo(() => (
       <div className="flex items-center justify-between mt-0 mb-1 px-2">
         <div className="flex items-center gap-3">
@@ -614,16 +556,6 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
 
         <div className='flex items-center gap-2'>
           {renderConfigDropdown}
-          {(isAgentRunning || runElapsedMs > 0) && (
-            <span
-              className={cn(
-                'text-[11px] font-mono text-muted-foreground/70 px-1 min-w-[48px] rounded-sm text-right select-none transition-opacity',
-                isAgentRunning ? 'opacity-100' : 'opacity-60'
-              )}
-            >
-              {formattedRunTime}
-            </span>
-          )}
           <BillingModal
             open={billingModalOpen}
             onOpenChange={setBillingModalOpen}
@@ -640,10 +572,8 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
             onClick={isAgentRunning && onStopAgent ? onStopAgent : handleSubmit}
             size="sm"
             className={cn(
-              'w-8 h-8 flex-shrink-0 self-end rounded-xl transition-all duration-300 relative overflow-hidden',
-              isAgentRunning
-                ? 'bg-primary text-white shadow-lg'
-                : '',
+              'w-8 h-8 flex-shrink-0 self-end rounded-xl transition-colors',
+              isAgentRunning ? 'animate-pulse bg-primary/15' : '',
               (!value.trim() && uploadedFiles.length === 0 && !isAgentRunning) ||
                 loading ||
                 (disabled && !isAgentRunning)
@@ -659,17 +589,14 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
             {loading ? (
               <Loader2 className="h-5 w-5 animate-spin" />
             ) : isAgentRunning ? (
-              <div className="relative w-5 h-5">
-                <div className="absolute inset-0 rounded-full border-2 border-white/30"></div>
-                <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-white border-r-white animate-spin"></div>
-              </div>
+              <div className="min-h-[14px] min-w-[14px] w-[14px] h-[14px] rounded-sm bg-current" />
             ) : (
               <ArrowUp className="h-5 w-5" />
             )}
           </Button>
         </div>
       </div>
-    ), [hideAttachments, loading, disabled, isAgentRunning, isUploading, sandboxId, messages, isLoggedIn, renderConfigDropdown, billingModalOpen, setBillingModalOpen, handleTranscription, onStopAgent, handleSubmit, value, uploadedFiles, totalTokens, latestPromptTokens, selectedModelInfo?.contextWindow, runElapsedMs, formattedRunTime]);
+    ), [hideAttachments, loading, disabled, isAgentRunning, isUploading, sandboxId, messages, isLoggedIn, renderConfigDropdown, billingModalOpen, setBillingModalOpen, handleTranscription, onStopAgent, handleSubmit, value, uploadedFiles, totalTokens, latestPromptTokens, selectedModelInfo?.contextWindow]);
 
 
 

@@ -5,7 +5,6 @@ import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Maximize2, X, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
-import { sanitizeMermaidSyntax } from '@/lib/mermaid-utils';
 
 // Global cache for rendered Mermaid diagrams
 const mermaidCache = new Map<string, string>();
@@ -279,11 +278,8 @@ export const MermaidRenderer: React.FC<MermaidRendererProps> = React.memo(({
         mermaidInstance = mermaid;
       }
 
-      // Sanitize chart before rendering
-      const sanitizedChart = sanitizeMermaidSyntax(chart.trim());
-
       const chartId = `mermaid-fullscreen-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      const result = await mermaidInstance.render(chartId, sanitizedChart);
+      const result = await mermaidInstance.render(chartId, chart);
 
       // Cache the fullscreen result too
       mermaidCache.set(chartHash, result.svg);
@@ -367,12 +363,8 @@ export const MermaidRenderer: React.FC<MermaidRendererProps> = React.memo(({
 
         console.log('🎯 Starting Mermaid rendering for chart:', chart.substring(0, 50) + '...');
 
-        // Sanitize the chart syntax before rendering
-        const sanitizedChart = sanitizeMermaidSyntax(chart.trim());
-        console.log('🧹 Sanitized Mermaid syntax');
-
         // Basic syntax validation before attempting to render
-        const trimmedChart = sanitizedChart;
+        const trimmedChart = chart.trim();
         if (!trimmedChart) {
           throw new Error('Empty chart content');
         }
