@@ -47,9 +47,6 @@ const RunItem: React.FC<RunItemProps> = ({ run }) => {
                   {run.trigger_name}
                 </span>
               </div>
-              <Badge variant="outline" className="text-xs">
-                {run.execution_type}
-              </Badge>
             </div>
             <div className="text-xs text-muted-foreground">
               {timeUntilRun}
@@ -73,12 +70,7 @@ const RunItem: React.FC<RunItemProps> = ({ run }) => {
                 <Calendar className="h-3 w-3" />
                 <span>Next run: {nextRunTime.toLocaleString()}</span>
               </div>
-              
-              <div className="flex items-center space-x-2">
-                <Zap className="h-3 w-3" />
-                <span>Type: {run.execution_type}</span>
-              </div>
-              
+
               {run.agent_prompt && (
                 <div className="mt-2 p-2 bg-muted/50 rounded text-xs">
                   <strong>Prompt:</strong> {run.agent_prompt.substring(0, 100)}

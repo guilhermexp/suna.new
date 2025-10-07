@@ -573,7 +573,7 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
             size="sm"
             className={cn(
               'w-8 h-8 flex-shrink-0 self-end rounded-xl transition-colors',
-              isAgentRunning ? 'animate-pulse bg-primary/15' : '',
+              isAgentRunning ? 'animate-pulse bg-muted hover:bg-muted/80' : '',
               (!value.trim() && uploadedFiles.length === 0 && !isAgentRunning) ||
                 loading ||
                 (disabled && !isAgentRunning)
@@ -589,7 +589,7 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
             {loading ? (
               <Loader2 className="h-5 w-5 animate-spin" />
             ) : isAgentRunning ? (
-              <div className="min-h-[14px] min-w-[14px] w-[14px] h-[14px] rounded-sm bg-current" />
+              <div className="min-h-[14px] min-w-[14px] w-[14px] h-[14px] rounded-sm bg-foreground" />
             ) : (
               <ArrowUp className="h-5 w-5" />
             )}
