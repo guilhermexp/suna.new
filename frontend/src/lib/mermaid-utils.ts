@@ -17,7 +17,8 @@ export function isMermaidCode(language: string, code: string): boolean {
     const trimmed = code.trim();
     const firstLine = trimmed.split('\n')[0]?.toLowerCase().trim();
 
-    const mermaidStarters = [
+    // Primary Mermaid diagram types that MUST be declared at the start
+    const mermaidDiagramTypes = [
       'graph',
       'flowchart',
       'sequencediagram',
@@ -37,16 +38,13 @@ export function isMermaidCode(language: string, code: string): boolean {
       'c4context',
       'c4container',
       'c4component',
-      'c4dynamic',
-      // Git graph specific patterns (gitgraph starts with these commands)
-      'commit',
-      'branch',
-      'checkout',
-      'merge'
+      'c4dynamic'
     ];
 
-    // Only treat as Mermaid if the first line starts with a diagram declaration
-    return mermaidStarters.some(starter => firstLine.startsWith(starter.toLowerCase()));
+    // Only treat as Mermaid if the first line starts with a diagram type declaration
+    // Do NOT treat git commands (commit, branch, etc.) as Mermaid starters
+    // as they cause false positives when used in regular text
+    return mermaidDiagramTypes.some(starter => firstLine.startsWith(starter));
   }
 
   return false;
