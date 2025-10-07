@@ -442,7 +442,7 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
 
     // Calculate total tokens from messages
     const totalTokens = useMemo(() => {
-      if (!messages || messages.length === 0) return null;
+      if (!mounted || !messages || messages.length === 0) return null;
 
       let promptTokens = 0;
       let completionTokens = 0;
@@ -501,14 +501,14 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
         totalTokens: promptTokens + completionTokens,
         estimatedCost: totalCost > 0 ? totalCost : undefined,
       };
-    }, [messages]);
+    }, [mounted, messages]);
 
     // Determine model context window for indicator
     const selectedModelInfo = useMemo(() => modelOptions.find(m => m.id === selectedModel), [modelOptions, selectedModel]);
 
     // Extract latest prompt token usage to reflect post-compression prompt size
     const latestPromptTokens = useMemo(() => {
-      if (!messages || messages.length === 0) return null as number | null;
+      if (!mounted || !messages || messages.length === 0) return null as number | null;
       for (let i = messages.length - 1; i >= 0; i--) {
         const msg: any = messages[i];
         const content = safeJsonParse<Record<string, any>>(msg.content, {});
@@ -523,7 +523,7 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
         }
       }
       return null as number | null;
-    }, [messages]);
+    }, [mounted, messages]);
 
     const renderControls = useMemo(() => (
       <div className="flex items-center justify-between mt-0 mb-1 px-2">
