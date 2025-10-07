@@ -361,7 +361,6 @@ export const StreamlinedInstallDialog: React.FC<StreamlinedInstallDialogProps> =
             </div>
           </div>
         </DialogHeader>
-
         <div className="mt-6">
           <StepContent />
         </div>
