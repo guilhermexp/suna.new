@@ -455,6 +455,23 @@ git log upstream/main --author="marko-kraemer" --oneline | head -20
 
 ## 📝 Histórico de Sincronizações
 
+### 2025-10-07 (Sincronização Parcial)
+- **Commits analisados:** 22 commits desde 2025-10-04
+- **Mudanças aplicadas:** 3 commits
+  - ✅ `ae81e8e4` - Model Preservation (preserva modelo ao editar agente)
+  - ✅ `89af5949` - Remove 30min stream timeout frontend
+  - ✅ `3b3b6e69` - Revert broken safe_token_counter (correção crítica)
+- **Mudanças NÃO aplicadas (conflitos):**
+  - ❌ `89a4996d` - Trigger Fix (conflitos complexos)
+  - ❌ `0ec17b0d` - Workflow/Playbook Removal (14,281 linhas, 96 arquivos)
+  - ❌ `8d7e85de` - Backend Simplification/AgentLoader (450 linhas, dependência)
+- **Problemas corrigidos:**
+  - 🐛 Commit `dac29b46` importava `safe_token_counter` inexistente → Revertido
+  - ✅ Voltou a usar `litellm.token_counter` corretamente
+- **Customizações preservadas:** ✅ Billing LOCAL, ✅ 302.AI Model, ✅ Token Usage Components
+- **Resultado:** ⚠️ Parcial - Customizações preservadas, mas faltam refatorações upstream
+- **Próximos passos:** Aplicar AgentLoader + Workflow Removal em sequência
+
 ### 2025-10-04
 - **Commits processados:** ~2060 desde jan/2025
 - **Mudanças aplicadas:** 5 categorias principais
@@ -464,4 +481,4 @@ git log upstream/main --author="marko-kraemer" --oneline | head -20
 
 ---
 
-**Última atualização deste documento:** 2025-10-04
+**Última atualização deste documento:** 2025-10-07
