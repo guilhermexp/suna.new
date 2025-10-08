@@ -17,7 +17,8 @@ export function createClient() {
         if (typeof document === 'undefined') return []
         const source = document.cookie || ''
         if (!source) return []
-        return source.split('; ').filter(Boolean).map((pair) => {
+
+        const cookies = source.split('; ').filter(Boolean).map((pair) => {
           const eq = pair.indexOf('=')
           const name = decodeURIComponent(eq >= 0 ? pair.slice(0, eq) : pair)
           let value = decodeURIComponent(eq >= 0 ? pair.slice(eq + 1) : '')
@@ -33,6 +34,24 @@ export function createClient() {
 
           return { name, value }
         })
+
+        // Debug log to see what cookies we're returning
+        const authCookie = cookies.find(c => c.name.includes('auth-token'))
+        if (authCookie) {
+          console.log('Supabase client getAll: Found auth cookie', {
+            name: authCookie.name,
+            hasValue: !!authCookie.value,
+            valueLength: authCookie.value.length,
+            isJSON: authCookie.value.startsWith('{')
+          })
+        } else {
+          console.log('Supabase client getAll: No auth cookie found', {
+            cookieCount: cookies.length,
+            cookieNames: cookies.map(c => c.name)
+          })
+        }
+
+        return cookies
       },
       async setAll(cookiesToSet) {
         if (typeof document === 'undefined') return

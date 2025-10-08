@@ -32,14 +32,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const getInitialSession = async () => {
       console.log('AuthProvider: Getting initial session...');
+
+      // Debug: Check if cookies are accessible
+      if (typeof document !== 'undefined') {
+        const cookies = document.cookie;
+        const hasAuthCookie = cookies.includes('auth-token');
+        console.log('AuthProvider: Cookie check:', {
+          hasAuthCookie,
+          cookieLength: cookies.length,
+          cookiePreview: cookies.substring(0, 100)
+        });
+      }
+
       try {
         const {
           data: { session: currentSession },
+          error
         } = await supabase.auth.getSession();
         console.log('AuthProvider: Session retrieved:', {
           hasSession: !!currentSession,
           userId: currentSession?.user?.id,
-          email: currentSession?.user?.email
+          email: currentSession?.user?.email,
+          error: error?.message
         });
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
