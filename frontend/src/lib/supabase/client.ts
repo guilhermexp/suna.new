@@ -20,7 +20,17 @@ export function createClient() {
         return source.split('; ').filter(Boolean).map((pair) => {
           const eq = pair.indexOf('=')
           const name = decodeURIComponent(eq >= 0 ? pair.slice(0, eq) : pair)
-          const value = decodeURIComponent(eq >= 0 ? pair.slice(eq + 1) : '')
+          let value = decodeURIComponent(eq >= 0 ? pair.slice(eq + 1) : '')
+
+          // Handle base64 encoded values (Supabase SSR format)
+          if (value.startsWith('base64-')) {
+            try {
+              value = atob(value.replace('base64-', ''))
+            } catch (e) {
+              console.error('Failed to decode base64 cookie value:', e)
+            }
+          }
+
           return { name, value }
         })
       },
@@ -29,7 +39,20 @@ export function createClient() {
         for (const { name, value, options } of cookiesToSet) {
           // Ignore `httpOnly` on the client – browsers won't set it via JS
           const { name: _ignored, httpOnly: _httpOnly, ...rest } = (options ?? {}) as any
-          document.cookie = serialize(name, value ?? '', {
+
+          // If the value is a JSON object, encode it as base64 (Supabase SSR format)
+          let cookieValue = value ?? ''
+          if (cookieValue && typeof cookieValue === 'string' && cookieValue.startsWith('{')) {
+            try {
+              // Validate it's JSON first
+              JSON.parse(cookieValue)
+              cookieValue = 'base64-' + btoa(cookieValue)
+            } catch (e) {
+              // Not JSON, use as is
+            }
+          }
+
+          document.cookie = serialize(name, cookieValue, {
             path: '/',
             // Defaults from @supabase/ssr DEFAULT_COOKIE_OPTIONS
             sameSite: 'lax',
