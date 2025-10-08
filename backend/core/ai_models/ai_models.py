@@ -40,7 +40,7 @@ class ModelPricing:
 @dataclass
 class ModelConfig:
     """Essential model configuration - provider settings and API configuration only."""
-    
+
     # === Provider & API Configuration ===
     api_base: Optional[str] = None
     api_version: Optional[str] = None
@@ -48,7 +48,9 @@ class ModelConfig:
     deployment_id: Optional[str] = None  # Azure
     timeout: Optional[Union[float, int]] = None
     num_retries: Optional[int] = None
-    
+    model_name_override: Optional[str] = None  # Override model name sent to API
+    custom_llm_provider: Optional[str] = None  # Force LiteLLM to use specific provider protocol
+
     # === Headers (Provider-Specific) ===
     headers: Optional[Dict[str, str]] = None
     extra_headers: Optional[Dict[str, str]] = None
@@ -117,15 +119,19 @@ class Model:
             if self.provider == ModelProvider.ZAI and config.ZAI_API_KEY:
                 params["api_key"] = config.ZAI_API_KEY
             # 302.AI uses Anthropic provider but different API key (detected by custom api_base)
-            elif self.provider == ModelProvider.ANTHROPIC and self.config and self.config.api_base and "302.ai" in self.config.api_base and config.AI302_API_KEY:
-                params["api_key"] = config.AI302_API_KEY
+            elif self.provider == ModelProvider.ANTHROPIC and self.config and self.config.api_base:
+                if "302.ai" in self.config.api_base and config.AI302_API_KEY:
+                    params["api_key"] = config.AI302_API_KEY
+                elif "z.ai" in self.config.api_base and config.ZAI_API_KEY:
+                    # Z.AI Anthropic-compatible endpoint uses ZAI_API_KEY
+                    params["api_key"] = config.ZAI_API_KEY
 
         # Apply model-specific configuration if available
         if self.config:
             # Provider & API configuration parameters
             api_params = [
                 'api_base', 'api_version', 'base_url', 'deployment_id',
-                'timeout', 'num_retries'
+                'timeout', 'num_retries', 'custom_llm_provider'
             ]
 
             # Apply configured parameters
@@ -156,6 +162,11 @@ class Model:
                         params[key] = value
                 else:
                     params[key] = value
+
+        # IMPORTANT: Apply model_name_override LAST, after custom_llm_provider is set
+        # This ensures LiteLLM can detect the provider before we change the model name
+        if self.config and self.config.model_name_override:
+            params["model"] = self.config.model_name_override
 
         return params
     

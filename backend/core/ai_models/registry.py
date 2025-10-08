@@ -355,7 +355,7 @@ class ModelRegistry:
         self.register(
             Model(
                 id="openai/glm-4.6",
-                name="Z.AI GLM-4.6",
+                name="Z.AI GLM-4.6 (OpenAI)",
                 provider=ModelProvider.ZAI,
                 aliases=["glm-4.6", "Z.AI GLM-4.6", "zai/glm-4.6"],
                 context_window=200_000,
@@ -372,6 +372,36 @@ class ModelRegistry:
                 priority=93,
                 enabled=True,
                 config=ModelConfig(api_base="https://api.z.ai/api/coding/paas/v4"),
+            )
+        )
+
+        # GLM-4.6 with Anthropic-compatible API (Z.AI Coding Plan)
+        # Using Anthropic provider prefix so LiteLLM knows to use Anthropic protocol
+        # Z.AI provides Anthropic-compatible endpoint at /api/anthropic
+        # IMPORTANT: This allows direct API compatibility comparison with OpenAI version above
+        self.register(
+            Model(
+                id="anthropic/GLM-4.6",  # Use anthropic/ prefix for LiteLLM provider detection
+                name="Z.AI GLM-4.6 (Anthropic API)",
+                provider=ModelProvider.ZAI,
+                aliases=["glm-4.6-anthropic", "Z.AI GLM-4.6 (Anthropic)"],
+                context_window=200_000,
+                capabilities=[
+                    ModelCapability.CHAT,
+                    ModelCapability.FUNCTION_CALLING,
+                    ModelCapability.THINKING,
+                ],
+                pricing=ModelPricing(
+                    input_cost_per_million_tokens=0.50,
+                    output_cost_per_million_tokens=2.00,
+                ),
+                tier_availability=["paid"],
+                priority=92,  # Slightly lower priority than OpenAI version
+                enabled=True,
+                config=ModelConfig(
+                    api_base="https://api.z.ai/api/anthropic",  # Z.AI Anthropic-compatible endpoint
+                    # No model_name_override - let LiteLLM use anthropic/GLM-4.6
+                ),
             )
         )
 
