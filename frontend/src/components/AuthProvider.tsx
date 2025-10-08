@@ -53,12 +53,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           hasSession: !!currentSession,
           userId: currentSession?.user?.id,
           email: currentSession?.user?.email,
-          error: error?.message
+          hasError: !!error,
+          error: error?.message,
+          errorStatus: error?.status,
+          errorDetails: error
         });
+
+        if (error) {
+          console.error('AuthProvider: getSession error details:', error);
+        }
+
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
       } catch (error) {
-        console.error('AuthProvider: Error getting session:', error);
+        console.error('AuthProvider: Exception getting session:', error);
       } finally {
         setIsLoading(false);
       }

@@ -32,11 +32,15 @@ export function createClient() {
         // Debug log to see what cookies we're returning
         const authCookie = cookies.find(c => c.name.includes('auth-token'))
         if (authCookie) {
-          console.log('Supabase client getAll: Found auth cookie', {
-            name: authCookie.name,
-            hasValue: !!authCookie.value,
-            valueLength: authCookie.value.length,
-            isBase64: authCookie.value.startsWith('base64-')
+          console.log('Supabase client getAll: Returning cookies', {
+            totalCount: cookies.length,
+            authCookie: {
+              name: authCookie.name,
+              valueLength: authCookie.value.length,
+              isBase64: authCookie.value.startsWith('base64-'),
+              valuePreview: authCookie.value.substring(0, 50) + '...'
+            },
+            allCookies: cookies.map(c => ({ name: c.name, valueLength: c.value.length }))
           })
         } else {
           console.log('Supabase client getAll: No auth cookie found', {
