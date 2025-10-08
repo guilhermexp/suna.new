@@ -7,6 +7,8 @@ export function createClient() {
   return createBrowserClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
       getAll() {
+        if (typeof document === 'undefined') return []
+
         return document.cookie
           .split('; ')
           .filter(Boolean)
@@ -16,6 +18,8 @@ export function createClient() {
           })
       },
       setAll(cookies) {
+        if (typeof document === 'undefined') return
+
         cookies.forEach(({ name, value, options }) => {
           document.cookie = `${name}=${value}; path=${options?.path || '/'}; ${
             options?.maxAge ? `max-age=${options.maxAge};` : ''
