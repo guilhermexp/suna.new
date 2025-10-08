@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { SidebarLeft, FloatingMobileMenuButton } from '@/components/sidebar/sidebar-left';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { useAccounts } from '@/hooks/use-accounts';
@@ -27,8 +27,11 @@ interface DashboardLayoutContentProps {
 export default function DashboardLayoutContent({
   children,
 }: DashboardLayoutContentProps) {
-  const { user, isLoading } = useAuth();
-  const { data: accounts } = useAccounts({ enabled: !!user });
+  const { supabase, user, isLoading } = useAuth();
+  const [resolvedUser, setResolvedUser] = useState(user);
+  const [authChecked, setAuthChecked] = useState(false);
+  const effectiveUser = resolvedUser ?? user;
+  const { data: accounts } = useAccounts({ enabled: !!effectiveUser });
   const personalAccount = accounts?.find((account) => account.personal_account);
   const router = useRouter();
   const isMobile = useIsMobile();
@@ -63,27 +66,56 @@ export default function DashboardLayoutContent({
         threads: threads?.length || 0,
         agents: agentsResponse?.agents?.length || 0,
         accounts: accounts?.length || 0,
-        user: !!user
+        user: !!effectiveUser,
       });
     }
-  }, [isMobile, projects, threads, agentsResponse, accounts, user]);
+  }, [isMobile, projects, threads, agentsResponse, accounts, effectiveUser]);
 
   // API health is now managed by useApiHealth hook
   const isApiHealthy = healthData?.status === 'ok' && !healthError;
 
   // Check authentication status
   useEffect(() => {
-    console.log('Dashboard layout auth check:', { isLoading, hasUser: !!user, userId: user?.id });
-    if (!isLoading && !user) {
-      console.log('No user found, redirecting to /auth');
-      router.push('/auth');
+    console.log('Dashboard layout auth check:', {
+      isLoading,
+      hasUser: !!effectiveUser,
+      userId: effectiveUser?.id,
+    });
+  }, [effectiveUser, isLoading]);
+
+  useEffect(() => {
+    if (user) {
+      setResolvedUser(user);
+      setAuthChecked(true);
+      return;
     }
-  }, [user, isLoading, router]);
+
+    if (!isLoading && !authChecked) {
+      supabase.auth
+        .getSession()
+        .then(({ data: { session } }) => {
+          setResolvedUser(session?.user ?? null);
+        })
+        .catch(() => {
+          setResolvedUser(null);
+        })
+        .finally(() => {
+          setAuthChecked(true);
+        });
+    }
+  }, [user, isLoading, authChecked, supabase]);
+
+  useEffect(() => {
+    if (authChecked && !resolvedUser) {
+      console.log('No user resolved, redirecting to /auth');
+      router.replace('/auth');
+    }
+  }, [authChecked, resolvedUser, router]);
 
   const mantenanceBanner: React.ReactNode | null = null;
 
   // Show loading state while checking auth, health, or maintenance status
-  if (isLoading || isCheckingHealth || maintenanceLoading) {
+  if (!authChecked || isLoading || isCheckingHealth || maintenanceLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -92,7 +124,7 @@ export default function DashboardLayoutContent({
   }
 
   // Don't render anything if not authenticated
-  if (!user) {
+  if (!resolvedUser) {
     return null;
   }
 
