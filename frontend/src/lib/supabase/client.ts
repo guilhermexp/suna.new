@@ -21,16 +21,10 @@ export function createClient() {
         const cookies = source.split('; ').filter(Boolean).map((pair) => {
           const eq = pair.indexOf('=')
           const name = decodeURIComponent(eq >= 0 ? pair.slice(0, eq) : pair)
-          let value = decodeURIComponent(eq >= 0 ? pair.slice(eq + 1) : '')
+          const value = decodeURIComponent(eq >= 0 ? pair.slice(eq + 1) : '')
 
-          // Handle base64 encoded values (Supabase SSR format)
-          if (value.startsWith('base64-')) {
-            try {
-              value = atob(value.replace('base64-', ''))
-            } catch (e) {
-              console.error('Failed to decode base64 cookie value:', e)
-            }
-          }
+          // DO NOT decode base64 values here - Supabase SSR expects them in base64 format
+          // The library will handle the decoding internally
 
           return { name, value }
         })
@@ -42,7 +36,7 @@ export function createClient() {
             name: authCookie.name,
             hasValue: !!authCookie.value,
             valueLength: authCookie.value.length,
-            isJSON: authCookie.value.startsWith('{')
+            isBase64: authCookie.value.startsWith('base64-')
           })
         } else {
           console.log('Supabase client getAll: No auth cookie found', {
@@ -59,19 +53,8 @@ export function createClient() {
           // Ignore `httpOnly` on the client – browsers won't set it via JS
           const { name: _ignored, httpOnly: _httpOnly, ...rest } = (options ?? {}) as any
 
-          // If the value is a JSON object, encode it as base64 (Supabase SSR format)
-          let cookieValue = value ?? ''
-          if (cookieValue && typeof cookieValue === 'string' && cookieValue.startsWith('{')) {
-            try {
-              // Validate it's JSON first
-              JSON.parse(cookieValue)
-              cookieValue = 'base64-' + btoa(cookieValue)
-            } catch (e) {
-              // Not JSON, use as is
-            }
-          }
-
-          document.cookie = serialize(name, cookieValue, {
+          // Pass the value as-is - Supabase SSR handles the encoding/decoding
+          document.cookie = serialize(name, value ?? '', {
             path: '/',
             // Defaults from @supabase/ssr DEFAULT_COOKIE_OPTIONS
             sameSite: 'lax',
