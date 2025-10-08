@@ -51,14 +51,7 @@ export async function middleware(request: NextRequest) {
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value, options }) => {
-            // Don't set httpOnly for auth tokens so client can read them
-            const modifiedOptions = {
-              ...options,
-              httpOnly: false,
-              sameSite: 'lax' as const,
-              secure: process.env.NODE_ENV === 'production'
-            };
-            supabaseResponse.cookies.set(name, value, modifiedOptions);
+            supabaseResponse.cookies.set(name, value, options);
           });
         },
       },
