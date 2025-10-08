@@ -45,13 +45,25 @@ export async function middleware(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      // Match the cookie options from server.ts for consistency
+      cookieOptions: {
+        httpOnly: false, // Allow browser to read the cookie
+        sameSite: 'lax',
+        secure: true,
+        path: '/',
+      },
       cookies: {
         getAll() {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value, options }) => {
-            supabaseResponse.cookies.set(name, value, options);
+            // Override httpOnly to false for auth cookies
+            const cookieOptions = {
+              ...options,
+              httpOnly: false,
+            };
+            supabaseResponse.cookies.set(name, value, cookieOptions);
           });
         },
       },
