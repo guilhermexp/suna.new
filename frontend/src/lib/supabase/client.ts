@@ -20,11 +20,11 @@ export function createClient() {
 
         const cookies = source.split('; ').filter(Boolean).map((pair) => {
           const eq = pair.indexOf('=')
-          const name = decodeURIComponent(eq >= 0 ? pair.slice(0, eq) : pair)
-          const value = decodeURIComponent(eq >= 0 ? pair.slice(eq + 1) : '')
+          const name = eq >= 0 ? pair.slice(0, eq) : pair
+          const value = eq >= 0 ? pair.slice(eq + 1) : ''
 
-          // DO NOT decode base64 values here - Supabase SSR expects them in base64 format
-          // The library will handle the decoding internally
+          // Return cookies as-is - Supabase SSR handles all encoding/decoding internally
+          // Do NOT use decodeURIComponent as it can corrupt base64-encoded values
 
           return { name, value }
         })
