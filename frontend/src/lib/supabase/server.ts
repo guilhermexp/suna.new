@@ -9,16 +9,6 @@ export async function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      // Expose auth cookie to the browser so the client can
-      // immediately read the session after a server-side sign-in.
-      // This trades off some security (no HttpOnly) for stability.
-      cookieOptions: {
-        // keep default name
-        httpOnly: false,
-        sameSite: 'lax',
-        secure: true,
-        path: '/',
-      },
       cookies: {
         getAll() {
           return cookieStore.getAll()
