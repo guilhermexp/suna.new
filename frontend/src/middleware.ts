@@ -51,7 +51,8 @@ export async function middleware(request: NextRequest) {
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value, options }) => {
-            supabaseResponse.cookies.set(name, value, options);
+            // Force httpOnly: false so browser client can read the same cookies
+            supabaseResponse.cookies.set(name, value, { ...options, httpOnly: false });
           });
         },
       },
