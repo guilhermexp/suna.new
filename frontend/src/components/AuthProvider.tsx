@@ -1,5 +1,6 @@
 'use client';
 
+// Force rebuild with correct environment variables
 import React, {
   createContext,
   useContext,
