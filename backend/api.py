@@ -1,6 +1,7 @@
 from dotenv import load_dotenv
 load_dotenv()
 
+import os
 from fastapi import FastAPI, Request, HTTPException, Response, Depends, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -133,6 +134,12 @@ async def log_requests_middleware(request: Request, call_next):
 # Define allowed origins based on environment
 allowed_origins = ["https://www.suna.so", "https://suna.so"]
 allow_origin_regex = None
+
+# Add Railway frontend URL if running on Railway
+railway_frontend_url = os.getenv("RAILWAY_SERVICE_FRONTEND_URL")
+if railway_frontend_url:
+    allowed_origins.append(f"https://{railway_frontend_url}")
+    logger.debug(f"Added Railway frontend URL to CORS: https://{railway_frontend_url}")
 
 # Add staging-specific origins
 if config.ENV_MODE == EnvMode.LOCAL:
