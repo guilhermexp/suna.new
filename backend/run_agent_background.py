@@ -25,7 +25,18 @@ from typing import Dict, Any
 
 redis_host = os.getenv('REDIS_HOST', 'redis')
 redis_port = int(os.getenv('REDIS_PORT', 6379))
-redis_broker = RedisBroker(host=redis_host, port=redis_port, middleware=[dramatiq.middleware.AsyncIO()])
+redis_password = os.getenv('REDIS_PASSWORD')
+
+# Create broker with authentication if password is provided
+broker_kwargs = {
+    'host': redis_host,
+    'port': redis_port,
+    'middleware': [dramatiq.middleware.AsyncIO()]
+}
+if redis_password:
+    broker_kwargs['password'] = redis_password
+
+redis_broker = RedisBroker(**broker_kwargs)
 
 dramatiq.set_broker(redis_broker)
 
