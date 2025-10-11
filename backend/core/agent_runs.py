@@ -595,26 +595,33 @@ async def initiate_agent_with_files(
     # Load agent configuration using unified loader
     from .agent_loader import get_agent_loader
     loader = await get_agent_loader()
-    
+
     agent_data = None
-    
-    logger.debug(f"[AGENT INITIATE] Loading agent: {agent_id or 'default'}")
-    
-    # Try to load specified agent
-    if agent_id:
-        agent_data = await loader.load_agent(agent_id, user_id, load_config=True)
-        logger.debug(f"Using agent {agent_data.name} ({agent_id}) version {agent_data.version_name}")
-    else:
-        # Load default agent
-        logger.debug(f"[AGENT INITIATE] Loading default agent")
-        default_agent = await client.table('agents').select('agent_id').eq('account_id', account_id).eq('is_default', True).maybe_single().execute()
-        
-        if default_agent.data:
-            agent_data = await loader.load_agent(default_agent.data['agent_id'], user_id, load_config=True)
-            logger.debug(f"Using default agent: {agent_data.name} ({agent_data.agent_id}) version {agent_data.version_name}")
+
+    try:
+        logger.debug(f"[AGENT INITIATE] Loading agent: {agent_id or 'default'}")
+
+        # Try to load specified agent
+        if agent_id:
+            agent_data = await loader.load_agent(agent_id, user_id, load_config=True)
+            logger.debug(f"Using agent {agent_data.name} ({agent_id}) version {agent_data.version_name}")
         else:
-            logger.warning(f"[AGENT INITIATE] No default agent found for account {account_id}")
-    
+            # Load default agent
+            logger.debug(f"[AGENT INITIATE] Loading default agent")
+            default_agent = await client.table('agents').select('agent_id').eq('account_id', account_id).eq('is_default', True).maybe_single().execute()
+
+            if default_agent.data:
+                agent_data = await loader.load_agent(default_agent.data['agent_id'], user_id, load_config=True)
+                logger.debug(f"Using default agent: {agent_data.name} ({agent_data.agent_id}) version {agent_data.version_name}")
+            else:
+                logger.warning(f"[AGENT INITIATE] No default agent found for account {account_id}")
+    except Exception as load_error:
+        logger.error(f"Error loading agent: {type(load_error).__name__}: {str(load_error)}\n{traceback.format_exc()}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to load agent configuration: {type(load_error).__name__}: {str(load_error)}"
+        )
+
     # Convert to dict for backward compatibility with rest of function
     agent_config = agent_data.to_dict() if agent_data else None
 
