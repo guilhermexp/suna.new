@@ -16,8 +16,8 @@ export async function createClient() {
         setAll(cookiesToSet) {
           try {
             cookiesToSet.forEach(({ name, value, options }) => {
-              // Force httpOnly: false so browser client can read the same cookies
-              cookieStore.set(name, value, { ...options, httpOnly: false })
+              // Use Supabase's default cookie options (includes httpOnly: true for security)
+              cookieStore.set(name, value, options)
             })
           } catch {
             // The `setAll` method was called from a Server Component.
