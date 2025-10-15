@@ -4,6 +4,7 @@ import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
 import { MermaidRenderer } from './mermaid-renderer';
 import { isMermaidCode } from '@/lib/mermaid-utils';
+import { CodeBlock, InlineCode } from '@/components/CodeBlock';
 
 export type MarkdownProps = {
   children: string;
@@ -30,11 +31,11 @@ export const Markdown: React.FC<MarkdownProps> = React.memo(({
           code: ({ children, className }) => {
             const match = /language-(\w+)/.exec(className || '');
             const language = match ? match[1] : '';
-            const code = String(children);
+            const code = String(children).replace(/\n$/, ''); // Remove trailing newline
             const isInline = !className?.includes('language-');
 
             if (isInline) {
-              return <code className="bg-muted px-1 py-0.5 rounded text-xs font-mono">{children}</code>;
+              return <InlineCode>{children}</InlineCode>;
             }
 
             // Check if this is a Mermaid diagram
@@ -42,13 +43,21 @@ export const Markdown: React.FC<MarkdownProps> = React.memo(({
               return <MermaidRenderer chart={code} className="my-2" />;
             }
 
+            // Use the new CodeBlock component for syntax-highlighted code
             return (
-              <code className={cn('block bg-muted p-2 rounded text-xs font-mono overflow-x-auto', className)}>
-                {children}
-              </code>
+              <CodeBlock
+                code={code}
+                language={language}
+                showHeader={true}
+                compact={false}
+              />
             );
           },
-          pre: ({ children }) => <pre className="bg-muted p-2 rounded text-xs font-mono overflow-x-auto mb-2">{children}</pre>,
+          pre: ({ children }) => {
+            // Pre tags are handled by the code component above
+            // Just return children directly to avoid double-wrapping
+            return <>{children}</>;
+          },
           blockquote: ({ children }) => <blockquote className="border-l-4 border-muted-foreground/20 pl-4 italic mb-2">{children}</blockquote>,
           strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
           em: ({ children }) => <em className="italic">{children}</em>,
