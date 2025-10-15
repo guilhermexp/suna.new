@@ -4,6 +4,9 @@ import { cn } from "@/lib/utils";
 import { Edit2 } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { CodeBlock, InlineCode } from '@/components/CodeBlock';
+import { MermaidRenderer } from './mermaid-renderer';
+import { isMermaidCode } from '@/lib/mermaid-utils';
 
 interface EditableMarkdownProps {
   value: string;
@@ -106,16 +109,34 @@ export const EditableMarkdown: React.FC<EditableMarkdownProps> = ({
               ol: ({ children }) => <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>,
               li: ({ children }) => <li className="text-sm">{children}</li>,
               code: ({ children, className }) => {
+                const match = /language-(\w+)/.exec(className || '');
+                const language = match ? match[1] : '';
+                const code = String(children).replace(/\n$/, '');
                 const isInline = !className?.includes('language-');
-                return isInline ? (
-                  <code className="bg-muted px-1 py-0.5 rounded text-xs font-mono">{children}</code>
-                ) : (
-                  <code className={cn('block bg-muted p-2 rounded text-xs font-mono overflow-x-auto', className)}>
-                    {children}
-                  </code>
+
+                if (isInline) {
+                  return <InlineCode>{children}</InlineCode>;
+                }
+
+                // Check if this is a Mermaid diagram
+                if (isMermaidCode(language, code)) {
+                  return <MermaidRenderer chart={code} className="my-2" />;
+                }
+
+                // Use the new CodeBlock component
+                return (
+                  <CodeBlock
+                    code={code}
+                    language={language}
+                    showHeader={true}
+                    compact={false}
+                  />
                 );
               },
-              pre: ({ children }) => <pre className="bg-muted p-2 rounded text-xs font-mono overflow-x-auto mb-2">{children}</pre>,
+              pre: ({ children }) => {
+                // Pre tags are handled by the code component above
+                return <>{children}</>;
+              },
               blockquote: ({ children }) => <blockquote className="border-l-4 border-muted-foreground/20 pl-4 italic mb-2">{children}</blockquote>,
               strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
               em: ({ children }) => <em className="italic">{children}</em>,
