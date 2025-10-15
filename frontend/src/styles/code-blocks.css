@@ -1,0 +1,426 @@
+/**
+ * Liquid Glass CSS Framework for Code Blocks
+ * A modern, near-black themed code block styling system with glass morphism effects
+ *
+ * Features:
+ * - CSS Variables for easy theming
+ * - Responsive design
+ * - Smooth hover animations
+ * - Cross-browser compatibility
+ * - Accessibility compliant
+ */
+
+/* ============================================
+   CSS VARIABLES
+   ============================================ */
+:root {
+  /* Liquid Glass Colors */
+  --code-bg-primary: #121212;
+  --code-bg-secondary: #1a1a1a;
+  --code-bg-hover: #1f1f1f;
+
+  /* Glass Effects */
+  --code-glass-blur: 12px;
+  --code-glass-opacity: 0.95;
+  --code-glass-border: rgba(255, 255, 255, 0.1);
+  --code-glass-shadow: rgba(0, 0, 0, 0.3);
+
+  /* Spacing */
+  --code-border-radius: 8px;
+  --code-padding: 1rem;
+  --code-header-padding: 0.75rem 1rem;
+  --code-gap: 0.5rem;
+
+  /* Typography */
+  --code-font-size: 0.875rem;
+  --code-line-height: 1.6;
+  --code-font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', 'Monaco', monospace;
+
+  /* Transitions */
+  --code-transition-fast: 150ms ease-in-out;
+  --code-transition-medium: 250ms ease-in-out;
+  --code-transition-slow: 350ms ease-in-out;
+
+  /* Shadows */
+  --code-shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
+  --code-shadow-md: 0 4px 8px rgba(0, 0, 0, 0.2);
+  --code-shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.3);
+
+  /* Button Colors */
+  --code-button-bg: rgba(255, 255, 255, 0.05);
+  --code-button-hover: rgba(255, 255, 255, 0.1);
+  --code-button-active: rgba(255, 255, 255, 0.15);
+
+  /* Text Colors */
+  --code-text-primary: #e4e4e7;
+  --code-text-secondary: #a1a1aa;
+  --code-text-muted: #71717a;
+  --code-text-success: #22c55e;
+}
+
+/* Dark mode adjustments (if needed for lighter themes) */
+.dark {
+  --code-bg-primary: #0a0a0a;
+  --code-bg-secondary: #141414;
+  --code-bg-hover: #1a1a1a;
+}
+
+/* ============================================
+   BASE CODE BLOCK STYLES
+   ============================================ */
+.liquid-glass-code-block {
+  position: relative;
+  background: var(--code-bg-primary);
+  border-radius: var(--code-border-radius);
+  border: 1px solid var(--code-glass-border);
+  box-shadow: var(--code-shadow-md);
+  overflow: hidden;
+  margin: 1rem 0;
+  transition: all var(--code-transition-medium);
+  backdrop-filter: blur(var(--code-glass-blur));
+  -webkit-backdrop-filter: blur(var(--code-glass-blur));
+}
+
+/* Hover State */
+.liquid-glass-code-block:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: var(--code-shadow-lg);
+  transform: translateY(-1px);
+}
+
+/* Focus-within for accessibility */
+.liquid-glass-code-block:focus-within {
+  outline: 2px solid rgba(139, 92, 246, 0.5);
+  outline-offset: 2px;
+}
+
+/* ============================================
+   CODE BLOCK HEADER
+   ============================================ */
+.liquid-glass-code-block__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--code-header-padding);
+  background: var(--code-bg-secondary);
+  border-bottom: 1px solid var(--code-glass-border);
+  min-height: 2.5rem;
+}
+
+.liquid-glass-code-block__language {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--code-gap);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--code-text-secondary);
+  font-family: var(--code-font-family);
+}
+
+.liquid-glass-code-block__filename {
+  font-size: 0.875rem;
+  color: var(--code-text-primary);
+  font-weight: 500;
+  font-family: var(--code-font-family);
+}
+
+/* ============================================
+   COPY BUTTON
+   ============================================ */
+.liquid-glass-code-block__copy-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  background: var(--code-button-bg);
+  border: 1px solid var(--code-glass-border);
+  border-radius: calc(var(--code-border-radius) - 2px);
+  color: var(--code-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--code-transition-fast);
+  outline: none;
+  font-family: var(--code-font-family);
+}
+
+.liquid-glass-code-block__copy-button:hover {
+  background: var(--code-button-hover);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: var(--code-text-primary);
+  transform: translateY(-1px);
+}
+
+.liquid-glass-code-block__copy-button:active {
+  background: var(--code-button-active);
+  transform: translateY(0);
+}
+
+.liquid-glass-code-block__copy-button:focus-visible {
+  outline: 2px solid rgba(139, 92, 246, 0.5);
+  outline-offset: 2px;
+}
+
+/* Copy button states */
+.liquid-glass-code-block__copy-button--copied {
+  background: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.3);
+  color: var(--code-text-success);
+}
+
+.liquid-glass-code-block__copy-button--copied:hover {
+  background: rgba(34, 197, 94, 0.15);
+}
+
+/* Icon sizing */
+.liquid-glass-code-block__copy-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+/* ============================================
+   CODE CONTENT
+   ============================================ */
+.liquid-glass-code-block__content {
+  position: relative;
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 600px;
+  background: var(--code-bg-primary);
+}
+
+/* Custom scrollbar styling */
+.liquid-glass-code-block__content::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.liquid-glass-code-block__content::-webkit-scrollbar-track {
+  background: var(--code-bg-secondary);
+}
+
+.liquid-glass-code-block__content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.liquid-glass-code-block__content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* Firefox scrollbar */
+.liquid-glass-code-block__content {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) var(--code-bg-secondary);
+}
+
+/* Pre and Code elements */
+.liquid-glass-code-block__content pre {
+  margin: 0;
+  padding: var(--code-padding);
+  background: transparent !important;
+  overflow: visible;
+  font-size: var(--code-font-size);
+  line-height: var(--code-line-height);
+  font-family: var(--code-font-family);
+}
+
+.liquid-glass-code-block__content code {
+  display: block;
+  background: transparent !important;
+  color: var(--code-text-primary);
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  white-space: pre;
+  word-spacing: normal;
+  word-break: normal;
+  tab-size: 4;
+  -moz-tab-size: 4;
+}
+
+/* ============================================
+   RESPONSIVE STYLES
+   ============================================ */
+
+/* Mobile devices (up to 640px) */
+@media (max-width: 640px) {
+  .liquid-glass-code-block {
+    margin: 0.75rem 0;
+    border-radius: 6px;
+  }
+
+  .liquid-glass-code-block__header {
+    padding: 0.625rem 0.875rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .liquid-glass-code-block__content pre {
+    padding: 0.875rem;
+    font-size: 0.8125rem;
+  }
+
+  .liquid-glass-code-block__copy-button {
+    align-self: flex-end;
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Tablets (641px to 1024px) */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .liquid-glass-code-block__content pre {
+    padding: 0.9375rem;
+  }
+}
+
+/* Large screens (1025px and up) */
+@media (min-width: 1025px) {
+  .liquid-glass-code-block__content {
+    max-height: 800px;
+  }
+}
+
+/* ============================================
+   PRINT STYLES
+   ============================================ */
+@media print {
+  .liquid-glass-code-block {
+    border: 1px solid #000;
+    box-shadow: none;
+    page-break-inside: avoid;
+  }
+
+  .liquid-glass-code-block__copy-button {
+    display: none;
+  }
+
+  .liquid-glass-code-block__content {
+    overflow: visible;
+    max-height: none;
+  }
+}
+
+/* ============================================
+   ACCESSIBILITY ENHANCEMENTS
+   ============================================ */
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .liquid-glass-code-block {
+    border-width: 2px;
+    border-color: rgba(255, 255, 255, 0.3);
+  }
+
+  .liquid-glass-code-block__copy-button {
+    border-width: 2px;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .liquid-glass-code-block,
+  .liquid-glass-code-block__copy-button,
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+
+  .liquid-glass-code-block:hover {
+    transform: none;
+  }
+}
+
+/* Screen reader only text */
+.liquid-glass-code-block__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* ============================================
+   ANIMATION KEYFRAMES
+   ============================================ */
+
+@keyframes liquid-glass-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes liquid-glass-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Loading state */
+.liquid-glass-code-block--loading {
+  position: relative;
+  overflow: hidden;
+}
+
+.liquid-glass-code-block--loading::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.05),
+    transparent
+  );
+  background-size: 200% 100%;
+  animation: liquid-glass-shimmer 2s infinite;
+  pointer-events: none;
+}
+
+/* ============================================
+   VARIANTS
+   ============================================ */
+
+/* Compact variant */
+.liquid-glass-code-block--compact .liquid-glass-code-block__header {
+  padding: 0.5rem 0.75rem;
+  min-height: 2rem;
+}
+
+.liquid-glass-code-block--compact .liquid-glass-code-block__content pre {
+  padding: 0.75rem;
+  font-size: 0.8125rem;
+}
+
+/* Inline code block */
+.liquid-glass-inline-code {
+  display: inline-block;
+  padding: 0.125rem 0.375rem;
+  background: var(--code-bg-secondary);
+  border: 1px solid var(--code-glass-border);
+  border-radius: 4px;
+  color: var(--code-text-primary);
+  font-family: var(--code-font-family);
+  font-size: 0.875em;
+  line-height: 1.4;
+}
