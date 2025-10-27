@@ -36,6 +36,21 @@ from .imports import (
     JsonImportResponse,
 )
 
+from .projects import (
+    ProjectCreateRequest,
+    ProjectUpdateRequest,
+    ProjectResponse,
+    ProjectsResponse,
+    KanbanTaskCreateRequest,
+    KanbanTaskUpdateRequest,
+    KanbanTaskResponse,
+    KanbanTasksResponse,
+    ProjectIconGenerationRequest,
+    ProjectIconGenerationResponse,
+    TaskBulkUpdateRequest,
+    TaskBulkUpdateResponse,
+)
+
 
 __all__ = [
     # Agent models
@@ -65,4 +80,18 @@ __all__ = [
     
     # Common models
     "PaginationInfo",
+
+    # Project models
+    "ProjectCreateRequest",
+    "ProjectUpdateRequest",
+    "ProjectResponse",
+    "ProjectsResponse",
+    "KanbanTaskCreateRequest",
+    "KanbanTaskUpdateRequest",
+    "KanbanTaskResponse",
+    "KanbanTasksResponse",
+    "ProjectIconGenerationRequest",
+    "ProjectIconGenerationResponse",
+    "TaskBulkUpdateRequest",
+    "TaskBulkUpdateResponse",
 ]
