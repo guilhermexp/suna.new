@@ -790,6 +790,63 @@ TOOL_GROUPS: Dict[str, ToolGroup] = {
         ]
     ),
 
+    "projects_management_tool": ToolGroup(
+        name="projects_management_tool",
+        display_name="Projects Management",
+        description="Create and manage projects and kanban tasks",
+        tool_class="ProjectsManagementTool",
+        methods=[
+            ToolMethod(
+                name="create_project",
+                display_name="Create Project",
+                description="Create a new project for organizing tasks",
+                enabled=True
+            ),
+            ToolMethod(
+                name="list_projects",
+                display_name="List Projects",
+                description="List all projects with filtering options",
+                enabled=True
+            ),
+            ToolMethod(
+                name="update_project",
+                display_name="Update Project",
+                description="Update project details",
+                enabled=True
+            ),
+            ToolMethod(
+                name="delete_project",
+                display_name="Delete Project",
+                description="Delete a project and all its tasks",
+                enabled=True
+            ),
+            ToolMethod(
+                name="create_kanban_task",
+                display_name="Create Task",
+                description="Create a new kanban task in a project",
+                enabled=True
+            ),
+            ToolMethod(
+                name="list_kanban_tasks",
+                display_name="List Tasks",
+                description="List all tasks in a project",
+                enabled=True
+            ),
+            ToolMethod(
+                name="update_kanban_task",
+                display_name="Update Task",
+                description="Update task details",
+                enabled=True
+            ),
+            ToolMethod(
+                name="delete_kanban_task",
+                display_name="Delete Task",
+                description="Delete a task from a project",
+                enabled=True
+            ),
+        ]
+    ),
+
     "sb_browser_tool": ToolGroup(
         name="sb_browser_tool",
         display_name="Browser Automation (Advanced)",

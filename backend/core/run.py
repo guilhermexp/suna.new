@@ -50,6 +50,7 @@ from core.tools.sb_docs_tool import SandboxDocsTool
 from core.tools.people_search_tool import PeopleSearchTool
 from core.tools.company_search_tool import CompanySearchTool
 from core.tools.paper_search_tool import PaperSearchTool
+from core.tools.projects_management_tool import ProjectsManagementTool
 from core.ai_models.manager import model_manager
 
 load_dotenv()
@@ -155,7 +156,7 @@ class ToolManager:
                 # Register all methods (backward compatibility)
                 self.thread_manager.add_tool(DataProvidersTool)
                 # logger.debug("Registered data_providers_tool (all methods)")
-        
+
         # Register search tools if EXA API key is available
         if config.EXA_API_KEY:
             if 'people_search_tool' not in disabled_tools:
@@ -166,7 +167,7 @@ class ToolManager:
                 else:
                     self.thread_manager.add_tool(PeopleSearchTool, thread_manager=self.thread_manager)
                     logger.debug("Registered people_search_tool (all methods)")
-            
+
             if 'company_search_tool' not in disabled_tools:
                 enabled_methods = self._get_enabled_methods_for_tool('company_search_tool')
                 if enabled_methods is not None:
@@ -175,7 +176,7 @@ class ToolManager:
                 else:
                     self.thread_manager.add_tool(CompanySearchTool, thread_manager=self.thread_manager)
                     logger.debug("Registered company_search_tool (all methods)")
-            
+
             if 'paper_search_tool' not in disabled_tools:
                 enabled_methods = self._get_enabled_methods_for_tool('paper_search_tool')
                 if enabled_methods is not None:
@@ -184,6 +185,24 @@ class ToolManager:
                 else:
                     self.thread_manager.add_tool(PaperSearchTool, thread_manager=self.thread_manager)
                     logger.debug("Registered paper_search_tool (all methods)")
+
+        # Register projects management tool for all agents
+        if 'projects_management_tool' not in disabled_tools:
+            from core.services.supabase import DBConnection
+            db = DBConnection()
+
+            # Get user_id from thread manager if available
+            if hasattr(self.thread_manager, 'db') and hasattr(self.thread_manager.db, 'client'):
+                try:
+                    # We'll get user_id from the agent context at runtime
+                    enabled_methods = self._get_enabled_methods_for_tool('projects_management_tool')
+                    # For now, register without user_id - it will be set during agent run
+                    # We need to pass a placeholder and update it in AgentRunner
+                    pass  # Will be registered in AgentRunner instead
+                except Exception as e:
+                    logger.warning(f"Could not register projects_management_tool in ToolManager: {e}")
+            else:
+                logger.debug("Skipping projects_management_tool registration in ToolManager (will register in AgentRunner)")
     
     def _register_agent_builder_tools(self, agent_id: str, disabled_tools: List[str]):
         """Register agent builder tools."""
@@ -219,12 +238,12 @@ class ToolManager:
                 pass
     
     def _register_suna_specific_tools(self, disabled_tools: List[str]):
+        from core.services.supabase import DBConnection
+        db = DBConnection()
+
         if 'agent_creation_tool' not in disabled_tools:
             from core.tools.agent_creation_tool import AgentCreationTool
-            from core.services.supabase import DBConnection
-            
-            db = DBConnection()
-            
+
             if hasattr(self, 'account_id') and self.account_id:
                 enabled_methods = self._get_enabled_methods_for_tool('agent_creation_tool')
                 if enabled_methods is not None:
@@ -235,6 +254,19 @@ class ToolManager:
                     logger.debug("Registered agent_creation_tool for Suna (all methods)")
             else:
                 logger.warning("Could not register agent_creation_tool: account_id not available")
+
+        # Register projects management tool
+        if 'projects_management_tool' not in disabled_tools:
+            if hasattr(self, 'user_id') and self.user_id:
+                enabled_methods = self._get_enabled_methods_for_tool('projects_management_tool')
+                if enabled_methods is not None:
+                    self.thread_manager.add_tool(ProjectsManagementTool, function_names=enabled_methods, db_connection=db, user_id=self.user_id)
+                    logger.debug(f"Registered projects_management_tool with methods: {enabled_methods}")
+                else:
+                    self.thread_manager.add_tool(ProjectsManagementTool, db_connection=db, user_id=self.user_id)
+                    logger.debug("Registered projects_management_tool (all methods)")
+            else:
+                logger.warning("Could not register projects_management_tool: user_id not available")
     
     def _register_browser_tool(self, disabled_tools: List[str]):
         if 'browser_tool' not in disabled_tools:
@@ -651,9 +683,22 @@ class AgentRunner:
 
         tool_manager.register_all_tools(agent_id=agent_id, disabled_tools=disabled_tools)
 
+        # Register projects management tool for ALL agents
+        if 'projects_management_tool' not in disabled_tools and hasattr(self, 'account_id') and self.account_id:
+            from core.services.supabase import DBConnection
+            db = DBConnection()
+
+            enabled_methods = self._get_enabled_methods_for_tool('projects_management_tool')
+            if enabled_methods is not None:
+                self.thread_manager.add_tool(ProjectsManagementTool, function_names=enabled_methods, db_connection=db, user_id=self.account_id)
+                logger.debug(f"✅ Registered projects_management_tool for ALL agents with methods: {enabled_methods}")
+            else:
+                self.thread_manager.add_tool(ProjectsManagementTool, db_connection=db, user_id=self.account_id)
+                logger.debug("✅ Registered projects_management_tool for ALL agents (all methods)")
+
         is_suna_agent = (self.config.agent_config and self.config.agent_config.get('is_suna_default', False)) or (self.config.agent_config is None)
         logger.debug(f"Agent config check: agent_config={self.config.agent_config is not None}, is_suna_default={is_suna_agent}")
-        
+
         if is_suna_agent:
             logger.debug("Registering Suna-specific tools...")
             self._register_suna_specific_tools(disabled_tools)
@@ -808,12 +853,12 @@ class AgentRunner:
         return get_enabled_methods_for_tool(tool_name, migrated_tools)
     
     def _register_suna_specific_tools(self, disabled_tools: List[str]):
+        from core.services.supabase import DBConnection
+        db = DBConnection()
+
         if 'agent_creation_tool' not in disabled_tools:
             from core.tools.agent_creation_tool import AgentCreationTool
-            from core.services.supabase import DBConnection
-            
-            db = DBConnection()
-            
+
             if hasattr(self, 'account_id') and self.account_id:
                 # Check for granular method control
                 enabled_methods = self._get_enabled_methods_for_tool('agent_creation_tool')
@@ -827,6 +872,8 @@ class AgentRunner:
                     logger.debug("Registered agent_creation_tool for Suna (all methods)")
             else:
                 logger.warning("Could not register agent_creation_tool: account_id not available")
+
+        # Note: projects_management_tool is now registered globally in setup_tools() for ALL agents
     
     def _get_disabled_tools_from_config(self) -> List[str]:
         disabled_tools = []
@@ -858,10 +905,10 @@ class AgentRunner:
             'sb_shell_tool', 'sb_files_tool', 'sb_deploy_tool', 'sb_expose_tool',
             'web_search_tool', 'image_search_tool', 'sb_vision_tool', 'sb_presentation_tool', 'sb_image_edit_tool',
             'sb_sheets_tool', 'sb_kb_tool', 'sb_design_tool', 'sb_presentation_outline_tool', 'sb_upload_file_tool',
-            'sb_docs_tool', 'sb_browser_tool', 'sb_templates_tool', 'computer_use_tool', 'sb_web_dev_tool', 
-            'data_providers_tool', 'browser_tool', 'people_search_tool', 'company_search_tool', 
+            'sb_docs_tool', 'sb_browser_tool', 'sb_templates_tool', 'computer_use_tool', 'sb_web_dev_tool',
+            'data_providers_tool', 'browser_tool', 'people_search_tool', 'company_search_tool',
             'agent_config_tool', 'mcp_search_tool', 'credential_profile_tool', 'workflow_tool', 'trigger_tool',
-            'agent_creation_tool'
+            'agent_creation_tool', 'projects_management_tool'
         ]
         
         for tool_name in all_tools:

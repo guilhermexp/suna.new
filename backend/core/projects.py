@@ -83,7 +83,7 @@ async def get_projects(
         db = DBConnection()
         client = await db.client
         # Build query without relying on related table subselects
-        query = client.table('projects').select("*").eq("user_id", user_id)
+        query = client.table('kanban_projects').select("*").eq("user_id", user_id)
 
         # Apply filters
         if is_archived is not None:
@@ -97,12 +97,12 @@ async def get_projects(
 
         # Apply sorting
         if sort_order.lower() == "asc":
-            query = query.order(sort_by, ascending=True)
+            query = query.order(sort_by)
         else:
-            query = query.order(sort_by, ascending=False)
+            query = query.order(sort_by, desc=True)
 
         # Get total count
-        count_query = client.table('projects').select("id", count="exact").eq("user_id", user_id)
+        count_query = client.table('kanban_projects').select("id", count="exact").eq("user_id", user_id)
 
         if is_archived is not None:
             count_query = count_query.eq("is_archived", is_archived)
@@ -140,10 +140,12 @@ async def get_projects(
             return ProjectsResponse(
                 projects=[],
                 pagination=PaginationInfo(
-                    page=page,
-                    per_page=per_page,
+                    current_page=page,
+                    page_size=per_page,
                     total_items=0,
-                    total_pages=0
+                    total_pages=0,
+                    has_next=False,
+                    has_previous=False
                 )
             )
 
@@ -161,10 +163,12 @@ async def get_projects(
         return ProjectsResponse(
             projects=projects,
             pagination=PaginationInfo(
-                page=page,
-                per_page=per_page,
+                current_page=page,
+                page_size=per_page,
                 total_items=total_items,
-                total_pages=total_pages
+                total_pages=total_pages,
+                has_next=page < total_pages,
+                has_previous=page > 1
             )
         )
     except Exception as e:
@@ -185,7 +189,7 @@ async def get_project(
         client = await db.client
         # Get project with task count
         try:
-            result = await client.table('projects').select("*").eq("id", project_id).eq("user_id", user_id).maybe_single().execute()
+            result = await client.table('kanban_projects').select("*").eq("id", project_id).eq("user_id", user_id).maybe_single().execute()
         except Exception as exc:
             logger.debug(f"Schema issue while loading project {project_id}: {exc}")
             raise HTTPException(status_code=404, detail="Project not found")
@@ -226,7 +230,7 @@ async def update_project(
         client = await db.client
         # Check if project exists and user has permission
         try:
-            existing = await client.table('projects').select("*").eq("id", project_id).eq("user_id", user_id).maybe_single().execute()
+            existing = await client.table('kanban_projects').select("*").eq("id", project_id).eq("user_id", user_id).maybe_single().execute()
         except Exception as exc:
             logger.debug(f"Schema issue while loading project {project_id} for update: {exc}")
             raise HTTPException(status_code=404, detail="Project not found")
@@ -298,13 +302,13 @@ async def delete_project(
         db = DBConnection()
         client = await db.client
         # Check if project exists and user has permission
-        existing = await client.table('projects').select("*").eq("id", project_id).eq("user_id", user_id).maybe_single().execute()
+        existing = await client.table('kanban_projects').select("*").eq("id", project_id).eq("user_id", user_id).maybe_single().execute()
 
         if not existing.data:
             raise HTTPException(status_code=404, detail="Project not found")
 
         # Delete project (cascade will delete tasks)
-        await client.table('projects').delete().eq("id", project_id).eq("user_id", user_id).execute()
+        await client.table('kanban_projects').delete().eq("id", project_id).eq("user_id", user_id).execute()
 
         logger.info(f"Project {project_id} deleted successfully for user {user_id}")
         return {"message": "Project deleted successfully"}
@@ -347,7 +351,7 @@ async def _create_project_record(client, project_record: Dict[str, object]) -> D
     pending_record = dict(project_record)
     while True:
         try:
-            result = await client.table('projects').insert(pending_record).execute()
+            result = await client.table('kanban_projects').insert(pending_record).execute()
         except Exception as exc:
             missing_column = _extract_missing_column_name(exc)
             if missing_column and missing_column in pending_record:
@@ -377,7 +381,7 @@ async def _update_project_record(client, project_id: str, user_id: str, update_d
 
     while True:
         try:
-            result = await client.table('projects').update(pending_update).eq("id", project_id).eq("user_id", user_id).execute()
+            result = await client.table('kanban_projects').update(pending_update).eq("id", project_id).eq("user_id", user_id).execute()
         except Exception as exc:
             missing_column = _extract_missing_column_name(exc)
             if missing_column and missing_column in pending_update:
@@ -392,7 +396,7 @@ async def _update_project_record(client, project_id: str, user_id: str, update_d
                 pending_update.pop(missing_column, None)
                 if not pending_update:
                     try:
-                        fetch = await client.table('projects').select("*").eq("id", project_id).eq("user_id", user_id).maybe_single().execute()
+                        fetch = await client.table('kanban_projects').select("*").eq("id", project_id).eq("user_id", user_id).maybe_single().execute()
                     except Exception as fetch_exc:
                         logger.debug(f"Schema issue while reloading project {project_id} after update fallback: {fetch_exc}")
                         raise HTTPException(status_code=404, detail="Project not found")
@@ -553,7 +557,7 @@ async def create_kanban_task(
         db = DBConnection()
         client = await db.client
         # Verify project exists and user has permission
-        project = await client.table('projects').select("*").eq("id", project_id).eq("user_id", user_id).maybe_single().execute()
+        project = await client.table('kanban_projects').select("*").eq("id", project_id).eq("user_id", user_id).maybe_single().execute()
 
         if not project.data:
             raise HTTPException(status_code=404, detail="Project not found")
@@ -616,7 +620,7 @@ async def get_kanban_tasks(
         db = DBConnection()
         client = await db.client
         # Verify project exists and user has permission
-        project = await client.table('projects').select("*").eq("id", project_id).eq("user_id", user_id).maybe_single().execute()
+        project = await client.table('kanban_projects').select("*").eq("id", project_id).eq("user_id", user_id).maybe_single().execute()
 
         if not project.data:
             raise HTTPException(status_code=404, detail="Project not found")
@@ -639,11 +643,11 @@ async def get_kanban_tasks(
 
         # Apply sorting (default: by position within status)
         if sort_by == "position":
-            query = query.order("status", ascending=True).order("position", ascending=True)
+            query = query.order("status").order("position")
         elif sort_order.lower() == "asc":
-            query = query.order(sort_by, ascending=True)
+            query = query.order(sort_by)
         else:
-            query = query.order(sort_by, ascending=False)
+            query = query.order(sort_by, desc=True)
 
         # Get total count
         count_query = client.table('kanban_tasks').select("id", count="exact").eq("project_id", project_id)
@@ -673,10 +677,12 @@ async def get_kanban_tasks(
             return KanbanTasksResponse(
                 tasks=[],
                 pagination=PaginationInfo(
-                    page=page,
-                    per_page=per_page,
+                    current_page=page,
+                    page_size=per_page,
                     total_items=0,
-                    total_pages=0
+                    total_pages=0,
+                    has_next=False,
+                    has_previous=False
                 )
             )
 
@@ -690,10 +696,12 @@ async def get_kanban_tasks(
         return KanbanTasksResponse(
             tasks=tasks,
             pagination=PaginationInfo(
-                page=page,
-                per_page=per_page,
+                current_page=page,
+                page_size=per_page,
                 total_items=total_items,
-                total_pages=total_pages
+                total_pages=total_pages,
+                has_next=page < total_pages,
+                has_previous=page > 1
             )
         )
 
@@ -717,7 +725,7 @@ async def get_kanban_task(
         db = DBConnection()
         client = await db.client
         # Verify project exists and user has permission
-        project = await client.table('projects').select("*").eq("id", project_id).eq("user_id", user_id).maybe_single().execute()
+        project = await client.table('kanban_projects').select("*").eq("id", project_id).eq("user_id", user_id).maybe_single().execute()
 
         if not project.data:
             raise HTTPException(status_code=404, detail="Project not found")
@@ -752,7 +760,7 @@ async def update_kanban_task(
         db = DBConnection()
         client = await db.client
         # Verify project exists and user has permission
-        project = await client.table('projects').select("*").eq("id", project_id).eq("user_id", user_id).maybe_single().execute()
+        project = await client.table('kanban_projects').select("*").eq("id", project_id).eq("user_id", user_id).maybe_single().execute()
 
         if not project.data:
             raise HTTPException(status_code=404, detail="Project not found")
@@ -830,7 +838,7 @@ async def delete_kanban_task(
         db = DBConnection()
         client = await db.client
         # Verify project exists and user has permission
-        project = await client.table('projects').select("*").eq("id", project_id).eq("user_id", user_id).maybe_single().execute()
+        project = await client.table('kanban_projects').select("*").eq("id", project_id).eq("user_id", user_id).maybe_single().execute()
 
         if not project.data:
             raise HTTPException(status_code=404, detail="Project not found")
@@ -861,7 +869,7 @@ async def bulk_update_kanban_tasks(
         db = DBConnection()
         client = await db.client
         # Verify project exists and user has permission
-        project = await client.table('projects').select("*").eq("id", project_id).eq("user_id", user_id).maybe_single().execute()
+        project = await client.table('kanban_projects').select("*").eq("id", project_id).eq("user_id", user_id).maybe_single().execute()
 
         if not project.data:
             raise HTTPException(status_code=404, detail="Project not found")
@@ -920,7 +928,7 @@ async def _get_next_task_position(db, project_id: str, status: str) -> int:
     """Get the next position for a task in a specific status column."""
     try:
         client = await db.client
-        result = await client.table('kanban_tasks').select("position").eq("project_id", project_id).eq("status", status).order("position", ascending=False).limit(1).execute()
+        result = await client.table('kanban_tasks').select("position").eq("project_id", project_id).eq("status", status).order("position", desc=True).limit(1).execute()
 
         if result.data and len(result.data) > 0:
             return result.data[0]["position"] + 1

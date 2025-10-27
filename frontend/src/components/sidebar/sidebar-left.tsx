@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { Bot, Menu, Plus, Zap, ChevronRight, BookOpen } from 'lucide-react';
+import { Bot, Menu, Plus, Zap, ChevronRight, BookOpen, Kanban } from 'lucide-react';
 
 import { NavAgents } from '@/components/sidebar/nav-agents';
 import { NavUserWithTeams } from '@/components/sidebar/nav-user-with-teams';
@@ -220,6 +220,21 @@ export function SidebarLeft({
               <BookOpen className="h-4 w-4 mr-1" />
               <span className="flex items-center justify-between w-full">
                 Knowledge Base
+              </span>
+            </SidebarMenuButton>
+          </Link>
+          <Link href="/projects">
+            <SidebarMenuButton
+              className={cn('touch-manipulation mt-1', {
+                'bg-accent text-accent-foreground font-medium': pathname === '/projects',
+              })}
+              onClick={() => {
+                if (isMobile) setOpenMobile(false);
+              }}
+            >
+              <Kanban className="h-4 w-4 mr-1" />
+              <span className="flex items-center justify-between w-full">
+                Projects
               </span>
             </SidebarMenuButton>
           </Link>
