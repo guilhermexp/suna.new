@@ -198,6 +198,9 @@ api_router.include_router(google_docs_router)
 from core.projects import router as projects_router
 api_router.include_router(projects_router)
 
+from core.calendar import router as calendar_router
+api_router.include_router(calendar_router, prefix="/calendar")
+
 @api_router.get("/health")
 async def health_check():
     logger.debug("Health check endpoint called")

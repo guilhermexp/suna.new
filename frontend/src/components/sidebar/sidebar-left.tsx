@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { Bot, Menu, Plus, Zap, ChevronRight, BookOpen, Kanban } from 'lucide-react';
+import { Bot, Menu, Plus, Zap, ChevronRight, BookOpen, Kanban, Calendar, DollarSign } from 'lucide-react';
 
 import { NavAgents } from '@/components/sidebar/nav-agents';
 import { NavUserWithTeams } from '@/components/sidebar/nav-user-with-teams';
@@ -235,6 +235,36 @@ export function SidebarLeft({
               <Kanban className="h-4 w-4 mr-1" />
               <span className="flex items-center justify-between w-full">
                 Projects
+              </span>
+            </SidebarMenuButton>
+          </Link>
+          <Link href="/calendar">
+            <SidebarMenuButton
+              className={cn('touch-manipulation mt-1', {
+                'bg-accent text-accent-foreground font-medium': pathname === '/calendar',
+              })}
+              onClick={() => {
+                if (isMobile) setOpenMobile(false);
+              }}
+            >
+              <Calendar className="h-4 w-4 mr-1" />
+              <span className="flex items-center justify-between w-full">
+                Calendar
+              </span>
+            </SidebarMenuButton>
+          </Link>
+          <Link href="/finance-control">
+            <SidebarMenuButton
+              className={cn('touch-manipulation mt-1', {
+                'bg-accent text-accent-foreground font-medium': pathname === '/finance-control',
+              })}
+              onClick={() => {
+                if (isMobile) setOpenMobile(false);
+              }}
+            >
+              <DollarSign className="h-4 w-4 mr-1" />
+              <span className="flex items-center justify-between w-full">
+                Finance Control
               </span>
             </SidebarMenuButton>
           </Link>

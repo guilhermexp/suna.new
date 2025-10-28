@@ -5,7 +5,9 @@
       "Bash(source:*)",
       "Bash(python:*)",
       "Bash(curl:*)",
-      "mcp__supabase__list_tables"
+      "mcp__supabase__list_tables",
+      "mcp__supabase__execute_sql",
+      "Bash(python3:*)"
     ],
     "deny": [],
     "ask": []

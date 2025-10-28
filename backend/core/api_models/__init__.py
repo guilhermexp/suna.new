@@ -51,6 +51,13 @@ from .projects import (
     TaskBulkUpdateResponse,
 )
 
+from .calendar import (
+    CalendarEventCreateRequest,
+    CalendarEventUpdateRequest,
+    CalendarEventResponse,
+    CalendarEventsResponse,
+)
+
 
 __all__ = [
     # Agent models
@@ -94,4 +101,10 @@ __all__ = [
     "ProjectIconGenerationResponse",
     "TaskBulkUpdateRequest",
     "TaskBulkUpdateResponse",
+    
+    # Calendar models
+    "CalendarEventCreateRequest",
+    "CalendarEventUpdateRequest",
+    "CalendarEventResponse",
+    "CalendarEventsResponse",
 ]
