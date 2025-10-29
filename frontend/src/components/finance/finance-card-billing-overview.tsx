@@ -93,7 +93,7 @@ export function FinanceCardBillingOverview({ className }: FinanceCardBillingOver
   const billingEntries: BillingEntry[] = (pendings || []).map((pending) => ({
     id: pending.id,
     card: pending.description || 'Pagamento Pendente',
-    brand: pending.category || 'Não especificado',
+    brand: pending.categoryId || 'Não especificado',
     invoiceAmount: pending.amount,
     dueDate: new Date(pending.dueDate),
     status: mapStatusToBilling(pending.status),
