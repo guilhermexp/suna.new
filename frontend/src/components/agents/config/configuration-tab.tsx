@@ -39,8 +39,6 @@ interface ConfigurationTabProps {
   agentMetadata?: {
     is_suna_default?: boolean;
     centrally_managed?: boolean;
-    managed_agent_key?: string;
-    source_prompt?: string;
     restrictions?: {
       system_prompt_editable?: boolean;
       tools_editable?: boolean;
@@ -68,15 +66,6 @@ export function ConfigurationTab({
 }: ConfigurationTabProps) {
 
   const isSunaAgent = agentMetadata?.is_suna_default || false;
-  const isCentrallyManaged = agentMetadata?.centrally_managed || isSunaAgent;
-  const managedAgentKey = agentMetadata?.managed_agent_key as string | undefined;
-  const managedRestrictionFallback = React.useMemo(() => ({
-    system_prompt_editable: false,
-    tools_editable: false,
-    name_editable: false,
-    description_editable: false,
-    mcps_editable: true,
-  }), []);
 
   const mapAccordion = (val?: string) => {
     if (val === 'instructions') return isSunaAgent ? 'integrations' : 'system';
@@ -95,19 +84,15 @@ export function ConfigurationTab({
       setOpenAccordion(mapAccordion(initialAccordion));
     }
   }, [initialAccordion]);
-  const restrictions = agentMetadata?.restrictions || (isCentrallyManaged ? managedRestrictionFallback : {});
-
-  const managedAgentName = displayData.name || agentMetadata?.name || 'This agent';
+  const restrictions = agentMetadata?.restrictions || {};
 
   const isSystemPromptEditable = !isViewingOldVersion && (restrictions.system_prompt_editable !== false);
   const areToolsEditable = !isViewingOldVersion && (restrictions.tools_editable !== false);
 
   const handleSystemPromptChange = (value: string) => {
-    if (!isSystemPromptEditable && isCentrallyManaged) {
-      toast.error('System prompt cannot be edited', {
-        description: isSunaAgent
-          ? "Suna's system prompt is managed centrally and cannot be changed."
-          : `${managedAgentName}'s system prompt is centrally managed and cannot be changed.`,
+    if (!isSystemPromptEditable && isSunaAgent) {
+      toast.error("System prompt cannot be edited", {
+        description: "Suna's system prompt is managed centrally and cannot be changed.",
       });
       return;
     }
@@ -119,11 +104,9 @@ export function ConfigurationTab({
   };
 
   const handleToolsChange = (tools: Record<string, boolean | { enabled: boolean; description: string }>) => {
-    if (!areToolsEditable && isCentrallyManaged) {
-      toast.error('Tools cannot be modified', {
-        description: isSunaAgent
-          ? "Suna's default tools are managed centrally and cannot be changed."
-          : `${managedAgentName}'s default tools are centrally managed and cannot be changed.`,
+    if (!areToolsEditable && isSunaAgent) {
+      toast.error("Tools cannot be modified", {
+        description: "Suna's default tools are managed centrally and cannot be changed.",
       });
       return;
     }
@@ -150,29 +133,6 @@ export function ConfigurationTab({
               <p className="text-sm text-primary-700">
                 This is Suna's default agent with centrally managed system prompt and tools.
                 You can customize integrations, knowledge base, and triggers to personalize your experience.
-              </p>
-            </div>
-          )}
-
-          {!isSunaAgent && isCentrallyManaged && (
-            <div className="p-4 bg-primary/10 border border-primary-200 rounded-xl">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="text-primary-600">
-                  <KortixLogo size={20} />
-                </div>
-                <span className="font-semibold text-primary-800">Centrally Managed Agent</span>
-              </div>
-              <p className="text-sm text-primary-700">
-                {managedAgentKey === 'claude_code_cli' || agentMetadata?.source_prompt === 'CLAUDE.md' ? (
-                  <>
-                    {managedAgentName} keeps its protected system prompt in sync with <code className="bg-primary/20 px-1 rounded">CLAUDE.md</code> so the Claude Code CLI bridge always receives the official instructions.
-                  </>
-                ) : (
-                  <>
-                    {managedAgentName} is centrally managed to keep its baseline instructions and tool configuration in sync across the organization.
-                  </>
-                )}
-                {' '}You can still customize integrations, knowledge base entries, playbooks, and triggers to tailor this workflow.
               </p>
             </div>
           )}
