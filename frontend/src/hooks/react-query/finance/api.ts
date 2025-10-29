@@ -365,7 +365,6 @@ export async function updateFinanceSubscription(
   if (updates.status !== undefined) body.status = updates.status;
   if (updates.startDate !== undefined) body.startDate = updates.startDate.toISOString().split('T')[0];
   if (updates.nextBilling !== undefined) body.nextBilling = updates.nextBilling.toISOString().split('T')[0];
-  if (updates.notes !== undefined) body.notes = updates.notes;
 
   const payload = await makeRequest(`/finance/subscriptions/${subscriptionId}`, {
     method: 'PUT',
