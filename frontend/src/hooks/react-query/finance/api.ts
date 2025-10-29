@@ -341,7 +341,6 @@ export async function createFinanceSubscription(data: Partial<Subscription>): Pr
     status: data.status ?? 'ACTIVE',
     startDate: (data.startDate ?? new Date()).toISOString().split('T')[0],
     nextBilling: data.nextBilling ? data.nextBilling.toISOString().split('T')[0] : undefined,
-    notes: data.notes,
   };
 
   const payload = await makeRequest('/finance/subscriptions', {

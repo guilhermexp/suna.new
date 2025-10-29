@@ -59,7 +59,6 @@ const subscriptionSchema = z.object({
   startDate: z.date(),
   accountId: z.string().min(1, 'Account is required'),
   icon: z.string().optional(),
-  notes: z.string().optional(),
 });
 
 type SubscriptionFormData = z.infer<typeof subscriptionSchema>;
@@ -128,7 +127,6 @@ export function SubscriptionModal({
       startDate: new Date(),
       accountId: '',
       icon: '',
-      notes: '',
     },
   });
 
@@ -146,7 +144,6 @@ export function SubscriptionModal({
           startDate: new Date(subscription.startDate),
           accountId: subscription.accountId,
           icon: subscription.icon || '',
-          notes: '',
         });
         setSelectedService(subscription.serviceName);
       } else {
@@ -160,7 +157,6 @@ export function SubscriptionModal({
           startDate: new Date(),
           accountId: '',
           icon: '',
-          notes: '',
         });
         setSelectedService('');
       }
