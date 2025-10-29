@@ -147,13 +147,13 @@ function transformSummary(payload: any): FinancialSummary {
 
 export async function fetchFinanceSummary(accountId?: string): Promise<FinancialSummary> {
   const params = accountId ? `?accountId=${encodeURIComponent(accountId)}` : '';
-  const payload = await makeRequest(`/finance/summary${params}`);
+  const payload = await makeRequest(`/api/finance/summary${params}`);
   return transformSummary(payload);
 }
 
 export async function fetchFinanceAccounts(accountId?: string): Promise<Account[]> {
   const params = accountId ? `?accountId=${encodeURIComponent(accountId)}` : '';
-  const payload = await makeRequest(`/finance/accounts${params}`);
+  const payload = await makeRequest(`/api/finance/accounts${params}`);
   return Array.isArray(payload) ? payload.map(transformAccount) : [];
 }
 
@@ -190,7 +190,7 @@ function buildTransactionQuery(filters?: TransactionFilters): string {
 
 export async function fetchFinanceTransactions(filters?: TransactionFilters): Promise<Transaction[]> {
   const query = buildTransactionQuery(filters);
-  const payload = await makeRequest(`/finance/transactions${query}`);
+  const payload = await makeRequest(`/api/finance/transactions${query}`);
   return Array.isArray(payload) ? payload.map(transformTransaction) : [];
 }
 
@@ -210,7 +210,7 @@ export async function createFinanceTransaction(data: TransactionFormData): Promi
     notes: data.notes,
   };
 
-  const payload = await makeRequest('/finance/transactions', {
+  const payload = await makeRequest('/api/finance/transactions', {
     method: 'POST',
     body: JSON.stringify(body),
   });
@@ -232,7 +232,7 @@ export async function updateFinanceTransaction(
   if (updates.tags !== undefined) body.tags = updates.tags;
   if (updates.status !== undefined) body.status = updates.status;
 
-  const payload = await makeRequest(`/finance/transactions/${transactionId}`, {
+  const payload = await makeRequest(`/api/finance/transactions/${transactionId}`, {
     method: 'PUT',
     body: JSON.stringify(body),
   });
@@ -241,7 +241,7 @@ export async function updateFinanceTransaction(
 }
 
 export async function deleteFinanceTransaction(transactionId: string): Promise<void> {
-  await makeRequest(`/finance/transactions/${transactionId}`, {
+  await makeRequest(`/api/finance/transactions/${transactionId}`, {
     method: 'DELETE',
   });
 }
@@ -251,7 +251,7 @@ export async function deleteFinanceTransaction(transactionId: string): Promise<v
 // ---------------------------------------------------------------------------
 
 export async function fetchFinancePendings(): Promise<PendingPayment[]> {
-  const payload = await makeRequest('/finance/pendings');
+  const payload = await makeRequest('/api/finance/pendings');
   return Array.isArray(payload) ? payload.map(transformPending) : [];
 }
 
@@ -272,7 +272,7 @@ export async function createFinancePending(data: PendingPaymentFormData): Promis
     notes: data.notes,
   };
 
-  const payload = await makeRequest('/finance/pendings', {
+  const payload = await makeRequest('/api/finance/pendings', {
     method: 'POST',
     body: JSON.stringify(body),
   });
@@ -295,7 +295,7 @@ export async function updateFinancePending(
   if (updates.categoryId !== undefined) body.category = updates.categoryId;
   if (updates.notes !== undefined) body.notes = updates.notes;
 
-  const payload = await makeRequest(`/finance/pendings/${pendingId}`, {
+  const payload = await makeRequest(`/api/finance/pendings/${pendingId}`, {
     method: 'PUT',
     body: JSON.stringify(body),
   });
@@ -304,7 +304,7 @@ export async function updateFinancePending(
 }
 
 export async function markFinancePending(pendingId: string, status: 'PENDING' | 'OVERDUE' | 'PAID'): Promise<PendingPayment> {
-  const payload = await makeRequest(`/finance/pendings/${pendingId}/mark`, {
+  const payload = await makeRequest(`/api/finance/pendings/${pendingId}/mark`, {
     method: 'POST',
     body: JSON.stringify({ status }),
   });
@@ -313,7 +313,7 @@ export async function markFinancePending(pendingId: string, status: 'PENDING' | 
 }
 
 export async function deleteFinancePending(pendingId: string): Promise<void> {
-  await makeRequest(`/finance/pendings/${pendingId}`, {
+  await makeRequest(`/api/finance/pendings/${pendingId}`, {
     method: 'DELETE',
   });
 }
@@ -323,7 +323,7 @@ export async function deleteFinancePending(pendingId: string): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export async function fetchFinanceSubscriptions(): Promise<Subscription[]> {
-  const payload = await makeRequest('/finance/subscriptions');
+  const payload = await makeRequest('/api/finance/subscriptions');
   return Array.isArray(payload) ? payload.map(transformSubscription) : [];
 }
 
@@ -343,7 +343,7 @@ export async function createFinanceSubscription(data: Partial<Subscription>): Pr
     nextBilling: data.nextBilling ? data.nextBilling.toISOString().split('T')[0] : undefined,
   };
 
-  const payload = await makeRequest('/finance/subscriptions', {
+  const payload = await makeRequest('/api/finance/subscriptions', {
     method: 'POST',
     body: JSON.stringify(body),
   });
@@ -366,7 +366,7 @@ export async function updateFinanceSubscription(
   if (updates.startDate !== undefined) body.startDate = updates.startDate.toISOString().split('T')[0];
   if (updates.nextBilling !== undefined) body.nextBilling = updates.nextBilling.toISOString().split('T')[0];
 
-  const payload = await makeRequest(`/finance/subscriptions/${subscriptionId}`, {
+  const payload = await makeRequest(`/api/finance/subscriptions/${subscriptionId}`, {
     method: 'PUT',
     body: JSON.stringify(body),
   });
@@ -375,7 +375,7 @@ export async function updateFinanceSubscription(
 }
 
 export async function deleteFinanceSubscription(subscriptionId: string): Promise<void> {
-  await makeRequest(`/finance/subscriptions/${subscriptionId}`, {
+  await makeRequest(`/api/finance/subscriptions/${subscriptionId}`, {
     method: 'DELETE',
   });
 }
