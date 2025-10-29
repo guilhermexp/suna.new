@@ -202,7 +202,7 @@ from core.calendar import router as calendar_router
 api_router.include_router(calendar_router, prefix="/calendar")
 
 from core.finance import router as finance_router
-api_router.include_router(finance_router, prefix="/finance")
+api_router.include_router(finance_router)
 
 @api_router.get("/health")
 async def health_check():

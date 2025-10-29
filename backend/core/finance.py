@@ -37,10 +37,14 @@ SYSTEM_PROMPT = (
     "Regras gerais:\n"
     "- Sempre responda apenas com JSON válido, sem texto adicional.\n"
     "- Identifique corretamente o tipo de registro: TRANSACTION, PENDING ou SUBSCRIPTION.\n"
-    "- Valores devem ser números positivos (use ponto como separador decimal). Interprete moeda a partir do texto (padrão USD se não houver).\n"
+    "- Valores devem ser números positivos (use ponto como separador decimal). Interprete moeda a partir do texto (padrão BRL).\n"
+    "- IMPORTANTE: Se o texto não mencionar um VALOR numérico explícito, retorne amount como 0 e adicione uma nota em 'notes' pedindo o valor.\n"
     "- Datas devem utilizar ISO 8601 (YYYY-MM-DD). Quando ausência, deixe string vazia.\n"
     "- Para textos que pedem para cancelar/pausar/retomar uma assinatura existente, retornar SUBSCRIPTION com a ação apropriada e informar o identificador.\n"
-    "- Para novas assinaturas, preencher os campos relevantes com valores inferidos.\n\n"
+    "- Para novas assinaturas, preencher os campos relevantes com valores inferidos.\n"
+    "- Palavras-chave para SUBSCRIPTION: 'todo mês', 'mensalidade', 'assinatura', 'recorrente', 'todo dia X', 'sempre dia X'.\n"
+    "- Para TRANSACTION: eventos únicos como 'recebi', 'paguei', 'comprei' sem indicação de recorrência.\n"
+    "- Para PENDING: 'vence', 'pendente', 'a pagar', 'a receber' com data futura.\n\n"
     "Estrutura esperada:\n"
     "{\n"
     "  \"entryType\": \"transaction\" | \"pending\" | \"subscription\",\n"
@@ -788,7 +792,10 @@ async def delete_finance_subscription(
 # ---------------------------------------------------------------------------
 
 @router.post("/interpret")
-async def interpret_finance(request: InterpretRequest):
+async def interpret_finance(
+    request: InterpretRequest,
+    user_id: str = Depends(verify_and_get_user_id_from_jwt),
+):
     user_input = request.input.strip()
     if not user_input:
         raise HTTPException(status_code=400, detail="Texto para interpretação é obrigatório.")

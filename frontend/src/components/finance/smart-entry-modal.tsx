@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
+import { createClient } from '@/lib/supabase/client'
 import {
   useCreatePending,
   useCreateTransaction,
@@ -123,12 +124,24 @@ export function SmartEntryModal({
       return
     }
 
+    // Get authentication token
+    const supabase = createClient()
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+
+    if (!session?.access_token) {
+      toast.error('Você precisa estar autenticado para usar o assistente.')
+      return
+    }
+
     setIsProcessing(true)
     try {
       const response = await fetch(`${baseUrl}/finance/interpret`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({ input }),
         credentials: 'include',
@@ -169,7 +182,7 @@ export function SmartEntryModal({
     const description = parsed?.description?.trim() || input.trim()
     const amount = Math.abs(parsed?.amount ?? 0)
     if (!amount) {
-      throw new Error('Não encontrei o valor da transação.')
+      throw new Error('Não encontrei o valor da transação. Exemplo: "recebi 1250 do cliente Bruno ontem"')
     }
 
     const normalizedType = inferTransactionType(parsed?.type, input)
@@ -196,7 +209,7 @@ export function SmartEntryModal({
     const description = parsed?.description?.trim() || input.trim()
     const amount = Math.abs(parsed?.amount ?? 0)
     if (!amount) {
-      throw new Error('Não encontrei o valor da pendência.')
+      throw new Error('Não encontrei o valor da pendência. Exemplo: "pendência 3200 aluguel vence dia 10"')
     }
 
     const dueDate = parsed?.dueDate ? new Date(parsed.dueDate) : addDays(new Date(), 7)
@@ -263,7 +276,7 @@ export function SmartEntryModal({
     }
 
     if (!amount) {
-      throw new Error('Não encontrei o valor da assinatura.')
+      throw new Error('Não encontrei o valor da assinatura. Tente adicionar o valor, por exemplo: "pagamento escola 500 todo dia 30"')
     }
 
     await createSubscription.mutateAsync({
