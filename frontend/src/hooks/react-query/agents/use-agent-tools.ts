@@ -27,7 +27,7 @@ const fetchAgentTools = async (agentId: string): Promise<AgentToolsResponse> => 
     throw new Error('You must be logged in to get agent tools');
   }
 
-  const response = await fetch(`${API_URL}/agents/${agentId}/tools`, {
+  const response = await fetch(`${API_URL}/api/agents/${agentId}/tools`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',

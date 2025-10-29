@@ -42,7 +42,7 @@ export const useExportAgent = () => {
         throw new Error('You must be logged in to export agents');
       }
 
-      const response = await fetch(`${API_URL}/agents/${agentId}/export`, {
+      const response = await fetch(`${API_URL}/api/agents/${agentId}/export`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -94,7 +94,7 @@ export const useImportAgent = () => {
         throw new Error('You must be logged in to import agents');
       }
 
-      const response = await fetch(`${API_URL}/agents/import`, {
+      const response = await fetch(`${API_URL}/api/agents/import`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

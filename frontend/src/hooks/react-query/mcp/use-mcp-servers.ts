@@ -37,7 +37,7 @@ export const useMCPServerDetails = (qualifiedName: string, enabled: boolean = tr
       if (!session) throw new Error('No session');
 
       const response = await fetch(
-        `${API_URL}/mcp/servers/${qualifiedName}`,
+        `${API_URL}/api/mcp/servers/${qualifiedName}`,
         {
           headers: {
             'Authorization': `Bearer ${session.access_token}`,

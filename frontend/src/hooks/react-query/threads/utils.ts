@@ -92,7 +92,7 @@ const deleteSandbox = async (sandboxId: string): Promise<void> => {
       headers['Authorization'] = `Bearer ${session.access_token}`;
     }
 
-    const response = await fetch(`${API_URL}/sandboxes/${sandboxId}`, {
+    const response = await fetch(`${API_URL}/api/sandboxes/${sandboxId}`, {
       method: 'DELETE',
       headers,
     });
@@ -274,7 +274,7 @@ export const getPublicProjects = async (): Promise<Project[]> => {
               headers['Authorization'] = `Bearer ${session.access_token}`;
             }
             const response = await fetch(
-              `${API_URL}/project/${projectId}/sandbox/ensure-active`,
+              `${API_URL}/api/project/${projectId}/sandbox/ensure-active`,
               {
                 method: 'POST',
                 headers,

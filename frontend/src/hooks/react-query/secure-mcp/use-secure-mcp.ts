@@ -109,7 +109,7 @@ export function useUserCredentials() {
         throw new Error('You must be logged in to view credentials');
       }
 
-      const response = await fetch(`${API_URL}/secure-mcp/credentials`, {
+      const response = await fetch(`${API_URL}/api/secure-mcp/credentials`, {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
         },
@@ -137,7 +137,7 @@ export function useStoreCredential() {
         throw new Error('You must be logged in to store credentials');
       }
 
-      const response = await fetch(`${API_URL}/secure-mcp/credentials`, {
+      const response = await fetch(`${API_URL}/api/secure-mcp/credentials`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -171,7 +171,7 @@ export function useDeleteCredential() {
         throw new Error('You must be logged in to delete credentials');
       }
 
-      const response = await fetch(`${API_URL}/secure-mcp/credentials/${encodeURIComponent(mcp_qualified_name)}`, {
+      const response = await fetch(`${API_URL}/api/secure-mcp/credentials/${encodeURIComponent(mcp_qualified_name)}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
@@ -233,7 +233,7 @@ export function useMarketplaceTemplates(params?: {
       if (params?.sort_by) searchParams.set('sort_by', params.sort_by);
       if (params?.sort_order) searchParams.set('sort_order', params.sort_order);
 
-      const response = await fetch(`${API_URL}/templates/marketplace?${searchParams}`, {
+      const response = await fetch(`${API_URL}/api/templates/marketplace?${searchParams}`, {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
         },
@@ -259,7 +259,7 @@ export function useTemplateDetails(template_id: string) {
         throw new Error('You must be logged in to view template details');
       }
 
-      const response = await fetch(`${API_URL}/templates/${template_id}`, {
+      const response = await fetch(`${API_URL}/api/templates/${template_id}`, {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
         },
@@ -335,7 +335,7 @@ export function useMyTemplates(params?: {
       if (params?.sort_by) searchParams.set('sort_by', params.sort_by);
       if (params?.sort_order) searchParams.set('sort_order', params.sort_order);
 
-      const response = await fetch(`${API_URL}/templates/my?${searchParams}`, {
+      const response = await fetch(`${API_URL}/api/templates/my?${searchParams}`, {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
         },
@@ -363,7 +363,7 @@ export function usePublishTemplate() {
         throw new Error('You must be logged in to publish templates');
       }
 
-      const response = await fetch(`${API_URL}/templates/${template_id}/publish`, {
+      const response = await fetch(`${API_URL}/api/templates/${template_id}/publish`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -398,7 +398,7 @@ export function useUnpublishTemplate() {
         throw new Error('You must be logged in to unpublish templates');
       }
 
-      const response = await fetch(`${API_URL}/templates/${template_id}/unpublish`, {
+      const response = await fetch(`${API_URL}/api/templates/${template_id}/unpublish`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -432,7 +432,7 @@ export function useDeleteTemplate() {
         throw new Error('You must be logged in to delete templates');
       }
 
-      const response = await fetch(`${API_URL}/templates/${template_id}`, {
+      const response = await fetch(`${API_URL}/api/templates/${template_id}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -471,7 +471,7 @@ export function useInstallTemplate() {
       if (!session) {
         throw new Error('You must be logged in to install templates');
       }
-      const response = await fetch(`${API_URL}/templates/install`, {
+      const response = await fetch(`${API_URL}/api/templates/install`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

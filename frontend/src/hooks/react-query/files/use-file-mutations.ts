@@ -53,7 +53,7 @@ export function useFileUpload() {
       formData.append('file', file);
       formData.append('path', targetPath);
 
-      const response = await fetch(`${API_URL}/sandboxes/${sandboxId}/files`, {
+      const response = await fetch(`${API_URL}/api/sandboxes/${sandboxId}/files`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${session.access_token}`,
@@ -109,7 +109,7 @@ export function useFileDelete() {
       }
 
       const response = await fetch(
-        `${API_URL}/sandboxes/${sandboxId}/files?path=${encodeURIComponent(filePath)}`,
+        `${API_URL}/api/sandboxes/${sandboxId}/files?path=${encodeURIComponent(filePath)}`,
         {
           method: 'DELETE',
           headers: {
@@ -212,7 +212,7 @@ export function useFileCreate() {
         throw new Error('No access token available');
       }
 
-      const response = await fetch(`${API_URL}/sandboxes/${sandboxId}/files`, {
+      const response = await fetch(`${API_URL}/api/sandboxes/${sandboxId}/files`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
