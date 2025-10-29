@@ -87,7 +87,7 @@ const deleteTrigger = async (data: { triggerId: string; agentId: string }): Prom
   if (!session) {
     throw new Error('You must be logged in to create a trigger');
   }
-  const response = await fetch(`${API_URL}/triggers/${data.triggerId}`, {
+  const response = await fetch(`${API_URL}/api/triggers/${data.triggerId}`, {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
   });

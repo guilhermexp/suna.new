@@ -288,7 +288,7 @@ export function useCreateTemplate() {
         throw new Error('You must be logged in to create templates');
       }
 
-      const response = await fetch(`${API_URL}/templates`, {
+      const response = await fetch(`${API_URL}/api/templates`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
