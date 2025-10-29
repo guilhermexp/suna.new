@@ -26,7 +26,7 @@ import { useFileDelete } from '@/hooks/react-query/files';
 import { useQueryClient } from '@tanstack/react-query';
 import { ToolCallInput } from './floating-tool-preview';
 import { ChatSnack } from './chat-snack';
-import { Brain, Zap, Workflow, Database, ArrowDown } from 'lucide-react';
+import { Brain, Zap, Database, ArrowDown } from 'lucide-react';
 import { useComposioToolkitIcon } from '@/hooks/react-query/composio/use-composio';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TokenUsageDisplay } from '../token-usage-display';
@@ -152,7 +152,7 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
     const [showSnackbar, setShowSnackbar] = useState(defaultShowSnackbar);
     const [userDismissedUsage, setUserDismissedUsage] = useState(false);
     const [billingModalOpen, setBillingModalOpen] = useState(false);
-    const [agentConfigDialog, setAgentConfigDialog] = useState<{ open: boolean; tab: 'instructions' | 'knowledge' | 'triggers' | 'playbooks' | 'tools' | 'integrations' }>({ open: false, tab: 'instructions' });
+    const [agentConfigDialog, setAgentConfigDialog] = useState<{ open: boolean; tab: 'instructions' | 'knowledge' | 'triggers' | 'tools' | 'integrations' }>({ open: false, tab: 'instructions' });
     const [mounted, setMounted] = useState(false);
 
     const {
@@ -442,7 +442,7 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
 
     // Calculate total tokens from messages
     const totalTokens = useMemo(() => {
-      if (!messages || messages.length === 0) return null;
+      if (!mounted || !messages || messages.length === 0) return null;
 
       let promptTokens = 0;
       let completionTokens = 0;
@@ -501,14 +501,14 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
         totalTokens: promptTokens + completionTokens,
         estimatedCost: totalCost > 0 ? totalCost : undefined,
       };
-    }, [messages]);
+    }, [mounted, messages]);
 
     // Determine model context window for indicator
     const selectedModelInfo = useMemo(() => modelOptions.find(m => m.id === selectedModel), [modelOptions, selectedModel]);
 
     // Extract latest prompt token usage to reflect post-compression prompt size
     const latestPromptTokens = useMemo(() => {
-      if (!messages || messages.length === 0) return null as number | null;
+      if (!mounted || !messages || messages.length === 0) return null as number | null;
       for (let i = messages.length - 1; i >= 0; i--) {
         const msg: any = messages[i];
         const content = safeJsonParse<Record<string, any>>(msg.content, {});
@@ -523,7 +523,7 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
         }
       }
       return null as number | null;
-    }, [messages]);
+    }, [mounted, messages]);
 
     const renderControls = useMemo(() => (
       <div className="flex items-center justify-between mt-0 mb-1 px-2">
@@ -573,7 +573,7 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
             size="sm"
             className={cn(
               'w-8 h-8 flex-shrink-0 self-end rounded-xl transition-colors',
-              isAgentRunning ? 'animate-pulse bg-primary/15' : '',
+              isAgentRunning ? 'animate-pulse bg-muted hover:bg-muted/80' : '',
               (!value.trim() && uploadedFiles.length === 0 && !isAgentRunning) ||
                 loading ||
                 (disabled && !isAgentRunning)
@@ -589,7 +589,7 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
             {loading ? (
               <Loader2 className="h-5 w-5 animate-spin" />
             ) : isAgentRunning ? (
-              <div className="min-h-[14px] min-w-[14px] w-[14px] h-[14px] rounded-sm bg-current" />
+              <div className="min-h-[14px] min-w-[14px] w-[14px] h-[14px] rounded-sm bg-foreground" />
             ) : (
               <ArrowUp className="h-5 w-5" />
             )}
@@ -734,13 +734,6 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
                   >
                     <Zap className="h-3.5 w-3.5 flex-shrink-0" />
                     <span className="text-xs font-medium">Triggers</span>
-                  </button>
-                  <button
-                    onClick={() => setAgentConfigDialog({ open: true, tab: 'playbooks' })}
-                    className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-all duration-200 px-2.5 py-1.5 rounded-lg hover:bg-muted/50 border border-transparent hover:border-border/30 flex-shrink-0 cursor-pointer relative pointer-events-auto"
-                  >
-                    <Workflow className="h-3.5 w-3.5 flex-shrink-0" />
-                    <span className="text-xs font-medium">Playbooks</span>
                   </button>
                 </div>
               </div>

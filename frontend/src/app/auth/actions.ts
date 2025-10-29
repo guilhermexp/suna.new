@@ -69,11 +69,11 @@ export async function signIn(prevState: any, formData: FormData) {
     hasSession: !!data?.session
   });
 
-  // Simple redirect without verification
+  // Revalidate to ensure session is refreshed
   revalidatePath('/', 'layout');
 
-  // Return redirect info for client-side navigation
-  return { success: true, redirectTo: returnUrl || '/dashboard' };
+  // Use server-side redirect to ensure cookies are set before navigation
+  redirect(returnUrl || '/dashboard');
 }
 
 export async function signUp(prevState: any, formData: FormData) {
@@ -130,8 +130,8 @@ export async function signUp(prevState: any, formData: FormData) {
   // Revalidate to ensure cookies are persisted before redirect
   revalidatePath('/', 'layout');
 
-  // Return redirect info for client-side navigation
-  return { success: true, redirectTo: returnUrl || '/dashboard' };
+  // Use server-side redirect to ensure cookies are set before navigation
+  redirect(returnUrl || '/dashboard');
 }
 
 export async function forgotPassword(prevState: any, formData: FormData) {

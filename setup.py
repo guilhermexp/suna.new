@@ -132,6 +132,7 @@ def load_existing_env_vars():
             "OPENROUTER_API_KEY": backend_env.get("OPENROUTER_API_KEY", ""),
             "MORPH_API_KEY": backend_env.get("MORPH_API_KEY", ""),
             "GEMINI_API_KEY": backend_env.get("GEMINI_API_KEY", ""),
+            "ZAI_API_KEY": backend_env.get("ZAI_API_KEY", ""),
 
         },
         "search": {
@@ -733,6 +734,7 @@ class SetupWizard:
                 "2": ("Anthropic", "ANTHROPIC_API_KEY"),
                 "3": ("Google Gemini", "GEMINI_API_KEY"),
                 "4": ("OpenRouter", "OPENROUTER_API_KEY"),
+                "5": ("Zhipu GLM", "ZAI_API_KEY"),
             }
             print(
                 f"\n{Colors.CYAN}Select LLM providers to configure (e.g., 1,3):{Colors.ENDC}"

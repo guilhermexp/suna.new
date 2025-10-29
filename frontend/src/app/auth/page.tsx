@@ -88,20 +88,7 @@ function LoginContent() {
     formData.append('returnUrl', finalReturnUrl);
     const result = await signIn(prevState, formData);
 
-    if (
-      result &&
-      typeof result === 'object' &&
-      'success' in result &&
-      result.success &&
-      'redirectTo' in result
-      ) {
-      // Force page reload for navigation to ensure cookies are set
-      const redirectUrl = result.redirectTo as string;
-      // Use replace to prevent back button issues
-      window.location.replace(redirectUrl);
-      return null;
-    }
-
+    // If we get here, it means signIn returned an error (redirect() throws and doesn't return)
     if (result && typeof result === 'object' && 'message' in result) {
       toast.error('Login failed', {
         description: result.message as string,
@@ -127,21 +114,7 @@ function LoginContent() {
 
     const result = await signUp(prevState, formData);
 
-    // Check for success and redirectTo properties (direct login case)
-    if (
-      result &&
-      typeof result === 'object' &&
-      'success' in result &&
-      result.success &&
-      'redirectTo' in result
-    ) {
-      // Force page reload for navigation to ensure cookies are set
-      const redirectUrl = result.redirectTo as string;
-      // Use replace to prevent back button issues
-      window.location.replace(redirectUrl);
-      return null; // Return null to prevent normal form action completion
-    }
-
+    // If we get here, it means signUp returned (redirect() throws and doesn't return)
     // Check if registration was successful but needs email verification
     if (result && typeof result === 'object' && 'message' in result) {
       const resultMessage = result.message as string;

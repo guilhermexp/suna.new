@@ -1,6 +1,7 @@
 from dotenv import load_dotenv
 load_dotenv()
 
+import os
 from fastapi import FastAPI, Request, HTTPException, Response, Depends, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -134,6 +135,12 @@ async def log_requests_middleware(request: Request, call_next):
 allowed_origins = ["https://www.suna.so", "https://suna.so"]
 allow_origin_regex = None
 
+# Add Railway frontend URL if running on Railway
+railway_frontend_url = os.getenv("RAILWAY_SERVICE_FRONTEND_URL")
+if railway_frontend_url:
+    allowed_origins.append(f"https://{railway_frontend_url}")
+    logger.debug(f"Added Railway frontend URL to CORS: https://{railway_frontend_url}")
+
 # Add staging-specific origins
 if config.ENV_MODE == EnvMode.LOCAL:
     allowed_origins.append("http://localhost:3000")
@@ -204,6 +211,12 @@ api_router.include_router(calendar_router, prefix="/calendar")
 from core.finance import router as finance_router
 api_router.include_router(finance_router)
 
+from core.documents import api as documents_api
+api_router.include_router(documents_api.router)
+
+from core.websocket import api as websocket_api
+api_router.include_router(websocket_api.router)
+
 @api_router.get("/health")
 async def health_check():
     logger.debug("Health check endpoint called")
@@ -235,8 +248,6 @@ async def health_check():
 
 
 app.include_router(api_router, prefix="/api")
-app.include_router(billing_router)
-app.include_router(transcription_api.router)
 
 
 if __name__ == "__main__":

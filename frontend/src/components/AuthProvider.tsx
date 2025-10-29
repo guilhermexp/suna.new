@@ -1,5 +1,6 @@
 'use client';
 
+// Force rebuild with correct environment variables
 import React, {
   createContext,
   useContext,
@@ -31,20 +32,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const getInitialSession = async () => {
-      console.log('AuthProvider: Getting initial session...');
       try {
-        const {
-          data: { session: currentSession },
-        } = await supabase.auth.getSession();
-        console.log('AuthProvider: Session retrieved:', {
-          hasSession: !!currentSession,
-          userId: currentSession?.user?.id,
-          email: currentSession?.user?.email
-        });
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
+        // Call server-side API to get session (handles httpOnly cookies)
+        const response = await fetch('/api/auth/session');
+        const data = await response.json();
+
+        setSession(data.session);
+        setUser(data.user);
+
+        // If we have a session, set it in the Supabase client for subsequent requests
+        if (data.session) {
+          await supabase.auth.setSession({
+            access_token: data.session.access_token,
+            refresh_token: data.session.refresh_token,
+          });
+        }
       } catch (error) {
-        console.error('AuthProvider: Error getting session:', error);
+        console.error('Error getting session:', error);
       } finally {
         setIsLoading(false);
       }

@@ -369,22 +369,23 @@ export const MermaidRenderer: React.FC<MermaidRendererProps> = React.memo(({
           throw new Error('Empty chart content');
         }
 
-        // Check for basic Mermaid syntax
+        // Check for basic Mermaid syntax - must START with diagram type
         const firstLine = trimmedChart.split('\n')[0].toLowerCase().trim();
         const validStarters = [
-          'graph', 'flowchart', 'sequencediagram', 'sequence', 'classdiagram', 'class',
-          'statediagram', 'state', 'erdiagram', 'journey', 'gantt', 'pie',
+          'graph', 'flowchart', 'sequencediagram', 'classdiagram',
+          'statediagram', 'erdiagram', 'journey', 'gantt', 'pie',
           'gitgraph', 'mindmap', 'timeline', 'sankey', 'block',
           'quadrant', 'requirement', 'c4context', 'c4container',
           'c4component', 'c4dynamic'
         ];
-        
-        const hasValidStarter = validStarters.some(starter => 
-          firstLine.startsWith(starter) || firstLine.includes(starter)
+
+        // Must start with a valid diagram type (not just include it)
+        const hasValidStarter = validStarters.some(starter =>
+          firstLine.startsWith(starter)
         );
 
         if (!hasValidStarter) {
-          throw new Error(`Invalid diagram type. Chart must start with a valid Mermaid diagram type (e.g., graph, flowchart, sequenceDiagram, etc.). Found: "${firstLine}"`);
+          throw new Error(`Invalid diagram type. Chart must start with a valid Mermaid diagram type declaration. Found: "${firstLine}"`);
         }
 
         // Use cached Mermaid instance or initialize new one

@@ -176,8 +176,8 @@ async def make_llm_api_call(
     
     try:
         # Log the complete parameters being sent to LiteLLM
-        # logger.debug(f"Calling LiteLLM acompletion for {resolved_model_name}")
-        # logger.debug(f"Complete LiteLLM parameters: {params}")
+        logger.debug(f"Calling LiteLLM acompletion for {resolved_model_name}")
+        logger.debug(f"Complete LiteLLM parameters: {params}")
         
         # # Save parameters to txt file for debugging
         # import json

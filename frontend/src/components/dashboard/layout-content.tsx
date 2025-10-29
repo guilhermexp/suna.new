@@ -6,7 +6,6 @@ import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { useAccounts } from '@/hooks/use-accounts';
 import { useAuth } from '@/components/AuthProvider';
 import { useMaintenanceNoticeQuery } from '@/hooks/react-query/edge-flags';
-import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { useApiHealth } from '@/hooks/react-query';
 import { MaintenancePage } from '@/components/maintenance/maintenance-page';
@@ -30,7 +29,6 @@ export default function DashboardLayoutContent({
   const { user, isLoading } = useAuth();
   const { data: accounts } = useAccounts({ enabled: !!user });
   const personalAccount = accounts?.find((account) => account.personal_account);
-  const router = useRouter();
   const isMobile = useIsMobile();
   const { data: maintenanceNotice, isLoading: maintenanceLoading } = useMaintenanceNoticeQuery();
   const {
@@ -63,7 +61,7 @@ export default function DashboardLayoutContent({
         threads: threads?.length || 0,
         agents: agentsResponse?.agents?.length || 0,
         accounts: accounts?.length || 0,
-        user: !!user
+        user: !!user,
       });
     }
   }, [isMobile, projects, threads, agentsResponse, accounts, user]);
@@ -73,12 +71,12 @@ export default function DashboardLayoutContent({
 
   // Check authentication status
   useEffect(() => {
-    console.log('Dashboard layout auth check:', { isLoading, hasUser: !!user, userId: user?.id });
-    if (!isLoading && !user) {
-      console.log('No user found, redirecting to /auth');
-      router.push('/auth');
-    }
-  }, [user, isLoading, router]);
+    console.log('Dashboard layout auth check:', {
+      isLoading,
+      hasUser: !!user,
+      userId: user?.id,
+    });
+  }, [user, isLoading]);
 
   const mantenanceBanner: React.ReactNode | null = null;
 
