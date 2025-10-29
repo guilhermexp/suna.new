@@ -286,7 +286,6 @@ export function SmartEntryModal({
       billingDay: parsed?.billingDay || new Date().getDate(),
       category: parsed?.category || 'other',
       status: 'ACTIVE',
-      notes: parsed?.notes,
       accountId,
     })
   }
