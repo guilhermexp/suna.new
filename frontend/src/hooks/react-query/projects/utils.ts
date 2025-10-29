@@ -89,35 +89,35 @@ export async function getProjects(params: ProjectsParams = {}): Promise<Projects
   if (params.sort_order) searchParams.append('sort_order', params.sort_order);
 
   const query = searchParams.toString();
-  return makeRequest<ProjectsResponse>(`/projects${query ? `?${query}` : ''}`);
+  return makeRequest<ProjectsResponse>(`/api/projects${query ? `?${query}` : ''}`);
 }
 
 export async function getProject(projectId: string): Promise<Project> {
-  return makeRequest<Project>(`/projects/${projectId}`);
+  return makeRequest<Project>(`/api/projects/${projectId}`);
 }
 
 export async function createProject(data: ProjectCreateRequest): Promise<Project> {
-  return makeRequest<Project>('/projects', {
+  return makeRequest<Project>('/api/projects', {
     method: 'POST',
     body: JSON.stringify(data),
   });
 }
 
 export async function updateProject(projectId: string, data: ProjectUpdateRequest): Promise<Project> {
-  return makeRequest<Project>(`/projects/${projectId}`, {
+  return makeRequest<Project>(`/api/projects/${projectId}`, {
     method: 'PUT',
     body: JSON.stringify(data),
   });
 }
 
 export async function deleteProject(projectId: string): Promise<{ message: string }> {
-  return makeRequest<{ message: string }>(`/projects/${projectId}`, {
+  return makeRequest<{ message: string }>(`/api/projects/${projectId}`, {
     method: 'DELETE',
   });
 }
 
 export async function generateProjectIcon(data: ProjectIconGenerationRequest): Promise<ProjectIconGenerationResponse> {
-  return makeRequest<ProjectIconGenerationResponse>('/projects/generate-icon', {
+  return makeRequest<ProjectIconGenerationResponse>('/api/projects/generate-icon', {
     method: 'POST',
     body: JSON.stringify(data),
   });
@@ -141,18 +141,18 @@ export async function getKanbanTasks(
   if (params.sort_order) searchParams.append('sort_order', params.sort_order);
 
   const query = searchParams.toString();
-  return makeRequest<KanbanTasksResponse>(`/projects/${projectId}/tasks${query ? `?${query}` : ''}`);
+  return makeRequest<KanbanTasksResponse>(`/api/projects/${projectId}/tasks${query ? `?${query}` : ''}`);
 }
 
 export async function getKanbanTask(projectId: string, taskId: string): Promise<KanbanTask> {
-  return makeRequest<KanbanTask>(`/projects/${projectId}/tasks/${taskId}`);
+  return makeRequest<KanbanTask>(`/api/projects/${projectId}/tasks/${taskId}`);
 }
 
 export async function createKanbanTask(
   projectId: string,
   data: KanbanTaskCreateRequest
 ): Promise<KanbanTask> {
-  return makeRequest<KanbanTask>(`/projects/${projectId}/tasks`, {
+  return makeRequest<KanbanTask>(`/api/projects/${projectId}/tasks`, {
     method: 'POST',
     body: JSON.stringify(data),
   });
@@ -163,14 +163,14 @@ export async function updateKanbanTask(
   taskId: string,
   data: KanbanTaskUpdateRequest
 ): Promise<KanbanTask> {
-  return makeRequest<KanbanTask>(`/projects/${projectId}/tasks/${taskId}`, {
+  return makeRequest<KanbanTask>(`/api/projects/${projectId}/tasks/${taskId}`, {
     method: 'PUT',
     body: JSON.stringify(data),
   });
 }
 
 export async function deleteKanbanTask(projectId: string, taskId: string): Promise<{ message: string }> {
-  return makeRequest<{ message: string }>(`/projects/${projectId}/tasks/${taskId}`, {
+  return makeRequest<{ message: string }>(`/api/projects/${projectId}/tasks/${taskId}`, {
     method: 'DELETE',
   });
 }
@@ -179,7 +179,7 @@ export async function bulkUpdateKanbanTasks(
   projectId: string,
   data: TaskBulkUpdateRequest
 ): Promise<TaskBulkUpdateResponse> {
-  return makeRequest<TaskBulkUpdateResponse>(`/projects/${projectId}/tasks/bulk-update`, {
+  return makeRequest<TaskBulkUpdateResponse>(`/api/projects/${projectId}/tasks/bulk-update`, {
     method: 'POST',
     body: JSON.stringify(data),
   });
