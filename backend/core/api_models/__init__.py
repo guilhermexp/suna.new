@@ -58,6 +58,23 @@ from .calendar import (
     CalendarEventsResponse,
 )
 
+from .finance import (
+    FinanceAccountResponse,
+    FinanceSummaryVariation,
+    FinanceSummaryCrypto,
+    FinanceSummaryResponse,
+    FinanceTransactionResponse,
+    FinanceTransactionCreateRequest,
+    FinanceTransactionUpdateRequest,
+    FinancePendingPaymentResponse,
+    FinancePendingPaymentCreateRequest,
+    FinancePendingPaymentUpdateRequest,
+    FinanceSubscriptionResponse,
+    FinanceSubscriptionCreateRequest,
+    FinanceSubscriptionUpdateRequest,
+    FinanceMarkPendingRequest,
+)
+
 
 __all__ = [
     # Agent models
@@ -107,4 +124,20 @@ __all__ = [
     "CalendarEventUpdateRequest",
     "CalendarEventResponse",
     "CalendarEventsResponse",
+
+    # Finance models
+    "FinanceAccountResponse",
+    "FinanceSummaryVariation",
+    "FinanceSummaryCrypto",
+    "FinanceSummaryResponse",
+    "FinanceTransactionResponse",
+    "FinanceTransactionCreateRequest",
+    "FinanceTransactionUpdateRequest",
+    "FinancePendingPaymentResponse",
+    "FinancePendingPaymentCreateRequest",
+    "FinancePendingPaymentUpdateRequest",
+    "FinanceSubscriptionResponse",
+    "FinanceSubscriptionCreateRequest",
+    "FinanceSubscriptionUpdateRequest",
+    "FinanceMarkPendingRequest",
 ]

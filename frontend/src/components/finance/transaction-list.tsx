@@ -215,7 +215,7 @@ function TransactionRow({ transaction, onClick }: TransactionRowProps) {
       <div className="flex flex-shrink-0 flex-col items-end gap-2">
         <p className={cn('text-sm font-semibold', amountColor)}>
           {sign}
-          {formatCurrency(transaction.amount, 'USD')}
+          {formatCurrency(transaction.amount)}
         </p>
         <Badge
           variant="outline"

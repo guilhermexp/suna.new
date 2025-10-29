@@ -8,11 +8,13 @@ import { SmartEntryModal } from './smart-entry-modal'
 interface QuickActionsProps {
   onAddTransaction?: () => void
   onAddPending?: () => void
+  onAddSubscription?: () => void
 }
 
 export function QuickActions({
   onAddTransaction,
   onAddPending,
+  onAddSubscription,
 }: QuickActionsProps) {
   const [open, setOpen] = useState(false)
 
@@ -32,6 +34,7 @@ export function QuickActions({
         onOpenChange={setOpen}
         onAddTransaction={onAddTransaction}
         onAddPending={onAddPending}
+        onAddSubscription={onAddSubscription}
       />
     </>
   )

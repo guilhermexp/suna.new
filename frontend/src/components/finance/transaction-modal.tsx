@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import * as z from 'zod'
@@ -35,7 +35,7 @@ import {
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { TagInput } from '@/components/ui/tag-input'
-import { useCreateTransaction } from '@/hooks/react-query/finance'
+import { useCreateTransaction, useFinanceAccounts } from '@/hooks/react-query/finance'
 import type { TransactionType } from '@/lib/types/finance'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -85,6 +85,7 @@ interface TransactionModalProps {
 
 export function TransactionModal({ open, onOpenChange }: TransactionModalProps) {
   const createTransaction = useCreateTransaction()
+  const { data: accounts, isLoading: accountsLoading } = useFinanceAccounts()
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const form = useForm<TransactionFormValues>({
@@ -95,16 +96,29 @@ export function TransactionModal({ open, onOpenChange }: TransactionModalProps) 
       description: '',
       amount: 0,
       date: new Date(),
-      accountId: 'acc-1', // Default to first account
+      accountId: '',
       tags: [],
       notes: '',
     },
   })
 
+  useEffect(() => {
+    if (accounts?.length) {
+      const currentAccount = form.getValues('accountId')
+      if (!currentAccount) {
+        form.setValue('accountId', accounts[0].id)
+      }
+    }
+  }, [accounts, form])
+
   const transactionType = form.watch('type')
   const categories = transactionType === 'INCOME' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES
 
   async function onSubmit(values: TransactionFormValues) {
+    if (!values.accountId) {
+      toast.error('Selecione uma conta para registrar a transação.')
+      return
+    }
     setIsSubmitting(true)
     try {
       // Transform form values to match TransactionFormData type
@@ -219,7 +233,7 @@ export function TransactionModal({ open, onOpenChange }: TransactionModalProps) 
                 name="amount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Amount (USD) *</FormLabel>
+                  <FormLabel>Amount (BRL) *</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -278,16 +292,22 @@ export function TransactionModal({ open, onOpenChange }: TransactionModalProps) 
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Account *</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value}
+                    disabled={accountsLoading || !accounts?.length || isSubmitting}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select account" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="acc-1">Funding</SelectItem>
-                      <SelectItem value="acc-2">Unified Trading</SelectItem>
-                      <SelectItem value="acc-3">Savings</SelectItem>
+                      {accounts?.map((account) => (
+                        <SelectItem key={account.id} value={account.id}>
+                          {account.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -338,7 +358,7 @@ export function TransactionModal({ open, onOpenChange }: TransactionModalProps) 
               <Button type="button" variant="outline" onClick={handleClose} disabled={isSubmitting}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button type="submit" disabled={isSubmitting || accountsLoading || !accounts?.length}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {isSubmitting ? 'Creating...' : 'Create Transaction'}
               </Button>

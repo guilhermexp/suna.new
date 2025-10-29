@@ -102,7 +102,7 @@ export function generateMockSummary(): FinancialSummary {
       name: 'Funding',
       type: 'FUNDING',
       balance: fundingBalance,
-      currency: 'USD',
+      currency: 'BRL',
       color: 'from-pink-400 to-pink-600',
     },
     {
@@ -110,7 +110,7 @@ export function generateMockSummary(): FinancialSummary {
       name: 'Unified Trading',
       type: 'TRADING',
       balance: tradingBalance,
-      currency: 'USD',
+      currency: 'BRL',
       color: 'from-purple-400 to-purple-600',
     },
     {
@@ -118,14 +118,14 @@ export function generateMockSummary(): FinancialSummary {
       name: 'Savings',
       type: 'SAVINGS',
       balance: savingsBalance,
-      currency: 'USD',
+      currency: 'BRL',
       color: 'from-blue-400 to-blue-600',
     },
   ]
 
   return {
     totalBalance: parseFloat(totalBalance.toFixed(2)),
-    currency: 'USD',
+    currency: 'BRL',
     cryptoEquivalent: {
       symbol: 'BTC',
       amount: parseFloat((totalBalance / 57000).toFixed(6)), // Mock BTC price at $57,000
@@ -224,7 +224,7 @@ export function generateMockPendings(count: number = 8): PendingPayment[] {
       id: `pnd-${i + 1}`,
       description,
       amount: parseFloat(amount.toFixed(2)),
-      currency: 'USD',
+      currency: 'BRL',
       dueDate,
       recurrence,
       priority,

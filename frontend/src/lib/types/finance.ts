@@ -6,7 +6,7 @@
 // Core Enums
 export type TransactionType = 'INCOME' | 'EXPENSE'
 export type TransactionStatus = 'COMPLETED' | 'PENDING' | 'CANCELLED'
-export type AccountType = 'FUNDING' | 'TRADING' | 'SAVINGS'
+export type AccountType = 'FUNDING' | 'TRADING' | 'SAVINGS' | 'CHECKING' | 'CREDIT' | 'CASH' | 'OTHER'
 export type Recurrence = 'ONCE' | 'WEEKLY' | 'MONTHLY' | 'YEARLY'
 export type Priority = 'LOW' | 'MEDIUM' | 'HIGH'
 export type PendingStatus = 'PENDING' | 'OVERDUE' | 'PAID'
@@ -82,7 +82,8 @@ export interface Subscription {
   category: string
   status: 'ACTIVE' | 'PAUSED' | 'CANCELLED'
   startDate: Date
-  nextBilling: Date
+  nextBilling?: Date
+  accountId: string
   paymentHistory?: SubscriptionPayment[]
 }
 
@@ -158,8 +159,8 @@ export function getDaysUntilDue(dueDate: Date): number {
 }
 
 // Helper function to format currency
-export function formatCurrency(amount: number, currency: string = 'USD'): string {
-  return new Intl.NumberFormat('en-US', {
+export function formatCurrency(amount: number, currency: string = 'BRL'): string {
+  return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency,
   }).format(amount)

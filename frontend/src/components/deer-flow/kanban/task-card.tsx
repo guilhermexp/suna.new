@@ -1,8 +1,14 @@
 'use client';
 
 import React, { useState } from 'react';
-import { MoreVertical, Calendar as CalendarIcon } from 'lucide-react';
-import { Card } from '@/components/ui/card';
+import { Calendar as CalendarIcon, MoreVertical } from 'lucide-react';
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -12,7 +18,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
-import { KanbanTask, PRIORITY_COLORS, PRIORITY_LABELS } from '@/lib/types/projects';
+import {
+  KanbanTask,
+  PRIORITY_COLORS,
+  PRIORITY_LABELS,
+} from '@/lib/types/projects';
 import { KanbanTaskDialog } from './kanban-task-dialog';
 import { KanbanDeleteDialog } from './kanban-delete-dialog';
 import { cn } from '@/lib/utils';
@@ -31,56 +41,72 @@ export function TaskCard({ task, isDragging }: TaskCardProps) {
     <>
       <Card
         className={cn(
-          'p-3 cursor-grab active:cursor-grabbing transition-shadow hover:shadow-md',
-          isDragging && 'opacity-50 rotate-3 shadow-lg'
+          'group cursor-grab select-none gap-0 border bg-card/95 p-0 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:cursor-grabbing',
+          isDragging && 'rotate-3 opacity-60 shadow-lg'
         )}
       >
-        <div className="space-y-2">
+        <CardHeader className="border-b p-3">
           <div className="flex items-start justify-between gap-2">
-            <h4 className="font-medium text-sm flex-1 line-clamp-2">{task.title}</h4>
+            <CardTitle className="text-sm font-semibold leading-tight text-foreground">
+              {task.title}
+            </CardTitle>
             <DropdownMenu>
-              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                  <MoreVertical className="h-3 w-3" />
+              <DropdownMenuTrigger
+                asChild
+                onClick={(event) => event.stopPropagation()}
+              >
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 rounded-full p-0 text-muted-foreground hover:text-foreground"
+                >
+                  <MoreVertical className="h-3.5 w-3.5" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => setShowEditDialog(true)}>
-                  Edit Task
+                  Editar tarefa
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   className="text-destructive"
                   onClick={() => setShowDeleteDialog(true)}
                 >
-                  Delete Task
+                  Excluir
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
+        </CardHeader>
 
-          {task.description && (
-            <p className="text-xs text-muted-foreground line-clamp-2">
-              {task.description}
-            </p>
-          )}
+        {task.description && (
+          <CardContent className="p-3 pt-2 text-xs text-muted-foreground">
+            <p className="line-clamp-3 leading-relaxed">{task.description}</p>
+          </CardContent>
+        )}
 
-          <div className="flex items-center justify-between gap-2">
-            <Badge
-              variant="secondary"
-              className={cn('text-xs', PRIORITY_COLORS[task.priority])}
-            >
-              {PRIORITY_LABELS[task.priority]}
-            </Badge>
-
-            {task.due_date && (
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <CalendarIcon className="h-3 w-3" />
-                <span>{format(new Date(task.due_date), 'MMM d')}</span>
-              </div>
+        <CardFooter className="flex items-center justify-between gap-2 border-t p-3">
+          <Badge
+            variant="secondary"
+            className={cn(
+              'text-[11px] font-medium uppercase tracking-wide',
+              PRIORITY_COLORS[task.priority],
             )}
-          </div>
-        </div>
+          >
+            {PRIORITY_LABELS[task.priority]}
+          </Badge>
+
+          {task.due_date ? (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <CalendarIcon className="h-3.5 w-3.5" />
+              <span>{format(new Date(task.due_date), "dd MMM")}</span>
+            </div>
+          ) : (
+            <span className="text-[11px] uppercase text-muted-foreground/70">
+              Sem prazo
+            </span>
+          )}
+        </CardFooter>
       </Card>
 
       <KanbanTaskDialog

@@ -17,6 +17,9 @@ import { toast } from 'sonner'
 import {
   useCreatePending,
   useCreateTransaction,
+  useCreateSubscription,
+  useUpdateSubscription,
+  useFinanceAccounts,
 } from '@/hooks/react-query/finance'
 import type {
   PendingPaymentFormData,
@@ -27,7 +30,7 @@ import type {
 } from '@/lib/types/finance'
 
 type SmartEntryType = {
-  entryType: 'transaction' | 'pending'
+  entryType: 'transaction' | 'pending' | 'subscription'
   transaction?: {
     type?: TransactionType
     amount?: number
@@ -49,6 +52,17 @@ type SmartEntryType = {
     counterparty?: string
     notes?: string
   }
+  subscription?: {
+    action?: 'create' | 'pause' | 'cancel' | 'resume'
+    serviceName?: string
+    amount?: number
+    currency?: string
+    billingDay?: number
+    category?: string
+    status?: 'ACTIVE' | 'PAUSED' | 'CANCELLED'
+    notes?: string
+    id?: string
+  }
   raw?: string
 }
 
@@ -57,6 +71,7 @@ interface SmartEntryModalProps {
   onOpenChange: (open: boolean) => void
   onAddTransaction?: () => void
   onAddPending?: () => void
+  onAddSubscription?: () => void
 }
 
 const SUGGESTIONS = [
@@ -71,11 +86,15 @@ export function SmartEntryModal({
   onOpenChange,
   onAddTransaction,
   onAddPending,
+  onAddSubscription,
 }: SmartEntryModalProps) {
   const [input, setInput] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
   const createTransaction = useCreateTransaction()
   const createPending = useCreatePending()
+  const createSubscription = useCreateSubscription()
+  const updateSubscription = useUpdateSubscription()
+  const { data: accounts } = useFinanceAccounts()
 
   function resetState() {
     setInput('')
@@ -126,8 +145,10 @@ export function SmartEntryModal({
         await createTransactionEntry(data.transaction)
       } else if (data.entryType === 'pending' && data.pending) {
         await createPendingEntry(data.pending)
+      } else if (data.entryType === 'subscription' && data.subscription) {
+        await handleSubscriptionInstruction(data.subscription)
       } else {
-        throw new Error('Não consegui entender se é transação ou pendência.')
+        throw new Error('Não consegui entender o tipo de registro.')
       }
 
       toast.success('Registro criado automaticamente.')
@@ -141,6 +162,10 @@ export function SmartEntryModal({
   }
 
   async function createTransactionEntry(parsed: SmartEntryType['transaction']) {
+    const accountId = accounts?.[0]?.id
+    if (!accountId) {
+      throw new Error('Nenhuma conta financeira disponível para registrar transações.')
+    }
     const description = parsed?.description?.trim() || input.trim()
     const amount = Math.abs(parsed?.amount ?? 0)
     if (!amount) {
@@ -155,7 +180,7 @@ export function SmartEntryModal({
       description,
       amount,
       date: parsed?.date ? new Date(parsed.date) : new Date(),
-      accountId: 'acc-1',
+      accountId,
       tags: parsed?.tags ?? [],
       notes: parsed?.notes || parsed?.counterparty || '',
     }
@@ -164,6 +189,10 @@ export function SmartEntryModal({
   }
 
   async function createPendingEntry(parsed: SmartEntryType['pending']) {
+    const accountId = accounts?.[0]?.id
+    if (!accountId) {
+      throw new Error('Nenhuma conta financeira disponível para registrar pendências.')
+    }
     const description = parsed?.description?.trim() || input.trim()
     const amount = Math.abs(parsed?.amount ?? 0)
     if (!amount) {
@@ -179,16 +208,79 @@ export function SmartEntryModal({
       recurrence: parsed?.recurrence || 'ONCE',
       priority: parsed?.priority || 'MEDIUM',
       categoryId: 'cat-utilities',
-      accountId: 'acc-1',
+      accountId,
       notes: parsed?.notes || parsed?.counterparty || '',
     }
 
     await createPending.mutateAsync(pendingData)
   }
 
+  async function handleSubscriptionInstruction(parsed: SmartEntryType['subscription']) {
+    const action = parsed?.action ?? 'create'
+
+    if (action === 'create') {
+      await createSubscriptionEntry(parsed)
+      return
+    }
+
+    if (!parsed?.id) {
+      throw new Error('Informe qual assinatura devemos atualizar ou cancelar.')
+    }
+
+    const statusMap: Record<string, 'ACTIVE' | 'PAUSED' | 'CANCELLED'> = {
+      pause: 'PAUSED',
+      resume: 'ACTIVE',
+      cancel: 'CANCELLED',
+      cancelation: 'CANCELLED',
+    }
+
+    const targetStatus = statusMap[action] ?? 'CANCELLED'
+
+    await updateSubscription.mutateAsync({
+      id: parsed.id,
+      data: { status: targetStatus },
+    })
+
+    toast.success(
+      targetStatus === 'PAUSED'
+        ? 'Assinatura pausada com sucesso.'
+        : targetStatus === 'ACTIVE'
+          ? 'Assinatura reativada.'
+          : 'Assinatura cancelada.',
+    )
+  }
+
+  async function createSubscriptionEntry(parsed: SmartEntryType['subscription']) {
+    const accountId = accounts?.[0]?.id
+    if (!accountId) {
+      throw new Error('Nenhuma conta financeira disponível para registrar assinaturas.')
+    }
+    const name = parsed?.serviceName?.trim() || input.trim()
+    const amount = Math.abs(parsed?.amount ?? 0)
+
+    if (!name) {
+      throw new Error('Informe o nome do serviço da assinatura.')
+    }
+
+    if (!amount) {
+      throw new Error('Não encontrei o valor da assinatura.')
+    }
+
+    await createSubscription.mutateAsync({
+      serviceName: name,
+      amount,
+      currency: parsed?.currency || 'BRL',
+      billingDay: parsed?.billingDay || new Date().getDate(),
+      category: parsed?.category || 'other',
+      status: 'ACTIVE',
+      notes: parsed?.notes,
+      accountId,
+    })
+  }
+
   const isActionDisabled = useMemo(
-    () => isProcessing || !input.trim(),
-    [isProcessing, input],
+    () => isProcessing || !input.trim() || !accounts?.length,
+    [isProcessing, input, accounts],
   )
 
   return (
@@ -252,6 +344,18 @@ export function SmartEntryModal({
                 className="h-auto p-0 text-xs"
               >
                 Abrir formulário de pendência
+              </Button>
+            )}
+            {onAddSubscription && (
+              <Button
+                variant="link"
+                onClick={() => {
+                  onOpenChange(false)
+                  onAddSubscription()
+                }}
+                className="h-auto p-0 text-xs"
+              >
+                Abrir formulário de assinatura
               </Button>
             )}
           </div>

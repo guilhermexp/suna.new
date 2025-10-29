@@ -4,7 +4,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { FinancialSummary } from '@/lib/types/finance'
-import { generateMockSummary } from '@/lib/utils/finance/mockData'
+import { fetchFinanceSummary } from './api'
 
 // Query keys
 export const financeSummaryKeys = {
@@ -19,11 +19,7 @@ export const financeSummaryKeys = {
 export function useFinanceSummary() {
   return useQuery<FinancialSummary>({
     queryKey: financeSummaryKeys.detail(),
-    queryFn: async () => {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 800))
-      return generateMockSummary()
-    },
+    queryFn: () => fetchFinanceSummary(),
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes (cache time)
     refetchOnWindowFocus: false,
