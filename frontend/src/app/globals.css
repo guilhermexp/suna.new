@@ -271,6 +271,11 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  
+  /* Finance-specific colors */
+  --finance-income: 142 76% 36%;
+  --finance-expense: 0 84% 60%;
+  --finance-pending: 45 93% 47%;
 }
 
 .dark {
@@ -306,6 +311,11 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(0.269 0 0);
   --sidebar-ring: oklch(0.439 0 0);
+  
+  /* Finance-specific colors (dark mode) */
+  --finance-income: 142 71% 45%;
+  --finance-expense: 0 72% 51%;
+  --finance-pending: 45 93% 54%;
 }
 
 @layer base {
@@ -987,5 +997,61 @@
       outline: 3px solid var(--purple);
       transition: outline 0.15s;
     }
+  }
+}
+/* Finance Control Page Custom Styles */
+@layer utilities {
+  .card-finance-hero {
+    background: radial-gradient(ellipse at top, hsl(var(--card)) 0%, hsl(var(--background)) 100%);
+    backdrop-filter: blur(12px);
+  }
+  
+  .text-balance-primary {
+    @apply text-5xl font-bold tracking-tight;
+  }
+  
+  .text-balance-crypto {
+    @apply text-lg text-orange-400 font-medium;
+  }
+
+  .text-finance-income {
+    color: hsl(var(--finance-income));
+  }
+
+  .text-finance-expense {
+    color: hsl(var(--finance-expense));
+  }
+
+  .text-finance-pending {
+    color: hsl(var(--finance-pending));
+  }
+
+  .bg-finance-income {
+    background-color: hsl(var(--finance-income));
+  }
+
+  .bg-finance-expense {
+    background-color: hsl(var(--finance-expense));
+  }
+
+  .bg-finance-pending {
+    background-color: hsl(var(--finance-pending));
+  }
+}
+
+@layer base {
+  @keyframes pulse-border {
+    0%, 100% {
+      border-color: hsl(var(--finance-expense));
+      opacity: 1;
+    }
+    50% {
+      border-color: hsl(var(--finance-expense) / 0.5);
+      opacity: 0.7;
+    }
+  }
+
+  .animate-pulse-border {
+    animation: pulse-border 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
 }

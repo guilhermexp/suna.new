@@ -1,0 +1,26 @@
+FROM ghcr.io/astral-sh/uv:python3.11-alpine
+
+ENV ENV_MODE local
+WORKDIR /app
+
+RUN apk add --no-cache curl git \
+    # Dependencies for Python package compilation
+    freetype-dev \
+    gcc \
+    musl-dev \
+    python3-dev \
+    # Rust compiler for tiktoken
+    cargo \
+    rust
+
+# Install Python dependencies
+COPY pyproject.toml uv.lock ./
+ENV UV_LINK_MODE=copy
+RUN uv sync --locked --quiet
+
+ENV PYTHONPATH=/app
+ENV PORT=8000
+EXPOSE 8000
+
+# Use uvicorn with hot reload for development
+CMD ["uv", "run", "uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

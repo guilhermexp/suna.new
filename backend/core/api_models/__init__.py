@@ -36,6 +36,45 @@ from .imports import (
     JsonImportResponse,
 )
 
+from .projects import (
+    ProjectCreateRequest,
+    ProjectUpdateRequest,
+    ProjectResponse,
+    ProjectsResponse,
+    KanbanTaskCreateRequest,
+    KanbanTaskUpdateRequest,
+    KanbanTaskResponse,
+    KanbanTasksResponse,
+    ProjectIconGenerationRequest,
+    ProjectIconGenerationResponse,
+    TaskBulkUpdateRequest,
+    TaskBulkUpdateResponse,
+)
+
+from .calendar import (
+    CalendarEventCreateRequest,
+    CalendarEventUpdateRequest,
+    CalendarEventResponse,
+    CalendarEventsResponse,
+)
+
+from .finance import (
+    FinanceAccountResponse,
+    FinanceSummaryVariation,
+    FinanceSummaryCrypto,
+    FinanceSummaryResponse,
+    FinanceTransactionResponse,
+    FinanceTransactionCreateRequest,
+    FinanceTransactionUpdateRequest,
+    FinancePendingPaymentResponse,
+    FinancePendingPaymentCreateRequest,
+    FinancePendingPaymentUpdateRequest,
+    FinanceSubscriptionResponse,
+    FinanceSubscriptionCreateRequest,
+    FinanceSubscriptionUpdateRequest,
+    FinanceMarkPendingRequest,
+)
+
 
 __all__ = [
     # Agent models
@@ -65,4 +104,40 @@ __all__ = [
     
     # Common models
     "PaginationInfo",
+
+    # Project models
+    "ProjectCreateRequest",
+    "ProjectUpdateRequest",
+    "ProjectResponse",
+    "ProjectsResponse",
+    "KanbanTaskCreateRequest",
+    "KanbanTaskUpdateRequest",
+    "KanbanTaskResponse",
+    "KanbanTasksResponse",
+    "ProjectIconGenerationRequest",
+    "ProjectIconGenerationResponse",
+    "TaskBulkUpdateRequest",
+    "TaskBulkUpdateResponse",
+    
+    # Calendar models
+    "CalendarEventCreateRequest",
+    "CalendarEventUpdateRequest",
+    "CalendarEventResponse",
+    "CalendarEventsResponse",
+
+    # Finance models
+    "FinanceAccountResponse",
+    "FinanceSummaryVariation",
+    "FinanceSummaryCrypto",
+    "FinanceSummaryResponse",
+    "FinanceTransactionResponse",
+    "FinanceTransactionCreateRequest",
+    "FinanceTransactionUpdateRequest",
+    "FinancePendingPaymentResponse",
+    "FinancePendingPaymentCreateRequest",
+    "FinancePendingPaymentUpdateRequest",
+    "FinanceSubscriptionResponse",
+    "FinanceSubscriptionCreateRequest",
+    "FinanceSubscriptionUpdateRequest",
+    "FinanceMarkPendingRequest",
 ]

@@ -1,5 +1,6 @@
 from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
+from fastapi.responses import Response
 from pydantic import BaseModel, Field, validator
 from core.utils.auth_utils import verify_and_get_user_id_from_jwt, require_agent_access, AuthorizedAgentAccess
 from core.services.supabase import DBConnection
@@ -526,6 +527,115 @@ async def update_agent_assignments(
     except Exception as e:
         logger.error(f"Error updating agent assignments: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to update assignments")
+
+@router.get("/entries/{entry_id}/content")
+async def get_entry_content(
+    entry_id: str,
+    user_id: str = Depends(verify_and_get_user_id_from_jwt)
+):
+    """Get file content for a knowledge base entry."""
+    try:
+        client = await db.client
+        account_id = user_id
+
+        # Verify ownership and get entry details
+        entry_result = await client.table('knowledge_base_entries').select(
+            'entry_id, file_path, filename, mime_type, account_id'
+        ).eq('entry_id', entry_id).eq('account_id', account_id).execute()
+
+        if not entry_result.data:
+            logger.warning(f"Entry not found or unauthorized: {entry_id} for user {account_id}")
+            raise HTTPException(status_code=404, detail="Entry not found")
+
+        entry = entry_result.data[0]
+        file_path = entry['file_path']
+        filename = entry['filename']
+        mime_type = entry['mime_type']
+
+        # Download file from Supabase Storage
+        try:
+            file_response = await client.storage.from_('file-uploads').download(file_path)
+
+            if not file_response:
+                logger.error(f"Failed to download file from storage: {file_path}")
+                raise HTTPException(status_code=500, detail="Failed to retrieve file from storage")
+
+            # Return file content with appropriate headers
+            return Response(
+                content=file_response,
+                media_type=mime_type,
+                headers={
+                    'Content-Disposition': f'inline; filename="{filename}"',
+                    'Content-Type': mime_type
+                }
+            )
+
+        except Exception as storage_error:
+            logger.error(f"Error downloading file from storage: {str(storage_error)}")
+            raise HTTPException(status_code=500, detail="Failed to retrieve file from storage")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting entry content: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve entry content")
+
+class DownloadUrlResponse(BaseModel):
+    download_url: str
+    filename: str
+    expires_in: int
+
+@router.get("/entries/{entry_id}/download-url", response_model=DownloadUrlResponse)
+async def get_entry_download_url(
+    entry_id: str,
+    user_id: str = Depends(verify_and_get_user_id_from_jwt)
+):
+    """Generate a signed download URL for a knowledge base entry."""
+    try:
+        client = await db.client
+        account_id = user_id
+
+        # Verify ownership and get entry details
+        entry_result = await client.table('knowledge_base_entries').select(
+            'entry_id, file_path, filename, account_id'
+        ).eq('entry_id', entry_id).eq('account_id', account_id).execute()
+
+        if not entry_result.data:
+            logger.warning(f"Entry not found or unauthorized: {entry_id} for user {account_id}")
+            raise HTTPException(status_code=404, detail="Entry not found")
+
+        entry = entry_result.data[0]
+        file_path = entry['file_path']
+        filename = entry['filename']
+
+        # Generate signed URL with 5-minute expiration
+        expires_in = 300  # 5 minutes in seconds
+
+        try:
+            signed_url_response = await client.storage.from_('file-uploads').create_signed_url(
+                file_path,
+                expires_in
+            )
+
+            if not signed_url_response or 'signedURL' not in signed_url_response:
+                logger.error(f"Failed to generate signed URL for file: {file_path}")
+                raise HTTPException(status_code=500, detail="Failed to generate download URL")
+
+            return DownloadUrlResponse(
+                download_url=signed_url_response['signedURL'],
+                filename=filename,
+                expires_in=expires_in
+            )
+
+        except Exception as storage_error:
+            logger.error(f"Error generating signed URL: {str(storage_error)}")
+            raise HTTPException(status_code=500, detail="Failed to generate download URL")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting download URL: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to generate download URL")
 
 class FolderMoveRequest(BaseModel):
     folder_id: str
