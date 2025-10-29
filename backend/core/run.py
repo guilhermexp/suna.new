@@ -52,6 +52,7 @@ from core.tools.company_search_tool import CompanySearchTool
 from core.tools.paper_search_tool import PaperSearchTool
 from core.tools.projects_management_tool import ProjectsManagementTool
 from core.ai_models.manager import model_manager
+from core.ai_models.ai_models import ModelCapability, ModelProvider
 
 load_dotenv()
 
@@ -615,6 +616,7 @@ class AgentRunner:
     def __init__(self, config: AgentConfig):
         self.config = config
         self.model_supports_vision: bool = True
+        self.model_supports_native_tools: bool = False
         self.resolved_model_id: Optional[str] = None
         self._sandbox_file_tool: Optional[SandboxFilesTool] = None
         self._image_description_cache: Dict[str, Optional[str]] = {}
@@ -655,11 +657,16 @@ class AgentRunner:
             self.resolved_model_id = resolved_model
             if model:
                 self.model_supports_vision = model.supports_vision
+                self.model_supports_native_tools = ModelCapability.FUNCTION_CALLING in model.capabilities
+                if model.provider == ModelProvider.ANTHROPIC:
+                    self.model_supports_native_tools = True
             else:
                 self.model_supports_vision = True
+                self.model_supports_native_tools = False
         except Exception as e:
             logger.warning(f"Failed to resolve model capabilities for {self.config.model_name}: {e}")
             self.model_supports_vision = True
+            self.model_supports_native_tools = False
 
         setattr(self.thread_manager, 'supports_vision', self.model_supports_vision)
         setattr(self.thread_manager, 'image_description_helper', self)
@@ -992,7 +999,7 @@ class AgentRunner:
                     temporary_message=temporary_message,
                     processor_config=ProcessorConfig(
                         xml_tool_calling=True,
-                        native_tool_calling=False,
+                        native_tool_calling=self.model_supports_native_tools,
                         execute_tools=True,
                         execute_on_stream=True,
                         tool_execution_strategy="parallel",
