@@ -89,7 +89,7 @@ export function DashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isMobile = useIsMobile();
-  const { user } = useAuth();
+  const { user, isLoading: isAuthLoading } = useAuth();
   const { data: accounts } = useAccounts({ enabled: !!user });
   const personalAccount = accounts?.find((account) => account.personal_account);
   const chatInputRef = React.useRef<ChatInputHandles>(null);
@@ -396,10 +396,10 @@ export function DashboardContent() {
                 </div> */}
               </div>
             </div>
-            {enabledEnvironment && (
+            {enabledEnvironment && !isAuthLoading && (
               <div className="w-full px-4 pb-8" data-tour="custom-agents">
                 <div className="max-w-7xl mx-auto">
-                  <CustomAgentsSection 
+                  <CustomAgentsSection
                     onAgentSelect={setSelectedAgent}
                   />
                 </div>
