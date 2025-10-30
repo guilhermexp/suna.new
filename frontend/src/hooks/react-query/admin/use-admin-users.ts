@@ -90,7 +90,7 @@ export function useAdminUserList(params: UserListParams = {}) {
       if (params.sort_by) searchParams.append('sort_by', params.sort_by);
       if (params.sort_order) searchParams.append('sort_order', params.sort_order);
       
-      const response = await backendApi.get(`/admin/users/list?${searchParams.toString()}`);
+      const response = await backendApi.get(`/api/admin/users/list?${searchParams.toString()}`);
       if (response.error) {
         throw new Error(response.error.message);
       }
@@ -106,7 +106,7 @@ export function useAdminUserDetails(userId: string | null) {
     queryFn: async (): Promise<UserDetails> => {
       if (!userId) throw new Error('User ID is required');
       
-      const response = await backendApi.get(`/admin/users/${userId}`);
+      const response = await backendApi.get(`/api/admin/users/${userId}`);
       if (response.error) {
         throw new Error(response.error.message);
       }
@@ -132,7 +132,7 @@ interface SearchResponse {
 export function useAdminUserSearch() {
   return useMutation({
     mutationFn: async (email: string): Promise<SearchResponse> => {
-      const response = await backendApi.get(`/admin/users/search/email?email=${encodeURIComponent(email)}`);
+      const response = await backendApi.get(`/api/admin/users/search/email?email=${encodeURIComponent(email)}`);
       if (response.error) {
         throw new Error(response.error.message);
       }
@@ -160,7 +160,7 @@ interface AdvancedSearchParams {
 export function useAdminAdvancedSearch() {
   return useMutation({
     mutationFn: async (params: AdvancedSearchParams): Promise<UserListResponse> => {
-      const response = await backendApi.post('/admin/users/search/advanced', params);
+      const response = await backendApi.post('/api/admin/users/search/advanced', params);
       if (response.error) {
         throw new Error(response.error.message);
       }
@@ -173,7 +173,7 @@ export function useAdminUserStats() {
   return useQuery({
     queryKey: ['admin', 'users', 'stats'],
     queryFn: async (): Promise<UserStats> => {
-      const response = await backendApi.get('/admin/users/stats/overview');
+      const response = await backendApi.get('/api/admin/users/stats/overview');
       if (response.error) {
         throw new Error(response.error.message);
       }

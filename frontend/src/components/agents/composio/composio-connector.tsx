@@ -469,7 +469,7 @@ export const ComposioConnector: React.FC<ComposioConnectorProps> = ({
     if (!selectedProfile || !agentId) return;
 
     const mcpConfigResponse = await composioApi.getMcpConfigForProfile(selectedProfile.profile_id);
-    const response = await backendApi.put(`/agents/${agentId}/custom-mcp-tools`, {
+    const response = await backendApi.put(`/api/agents/${agentId}/custom-mcp-tools`, {
       custom_mcps: [{
         ...mcpConfigResponse.mcp_config,
         enabledTools: selectedTools

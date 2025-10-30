@@ -23,7 +23,7 @@ export const useAgentUpcomingRuns = (agentId: string, limit: number = 10) => {
   return useQuery({
     queryKey: ['agent-upcoming-runs', agentId, limit],
     queryFn: async (): Promise<UpcomingRunsResponse> => {
-      const response = await backendApi.get(`/triggers/agents/${agentId}/upcoming-runs?limit=${limit}`);
+      const response = await backendApi.get(`/api/triggers/agents/${agentId}/upcoming-runs?limit=${limit}`);
       return response.data;
     },
     enabled: !!agentId,

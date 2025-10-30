@@ -165,7 +165,7 @@ export const ComposioToolsSelector: React.FC<ComposioToolsSelectorProps> = ({
     }
 
     try {
-      const response = await backendApi.get(`/agents/${agentId}`);
+      const response = await backendApi.get(`/api/agents/${agentId}`);
 
       if (response.success && response.data) {
         const agent = response.data;

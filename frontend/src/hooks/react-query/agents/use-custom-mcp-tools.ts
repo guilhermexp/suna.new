@@ -19,7 +19,7 @@ export const useCustomMCPToolsData = (agentId: string, mcpConfig: any) => {
   const { data, isLoading, error, refetch } = useQuery<CustomMCPToolsResponse>({
     queryKey: ['custom-mcp-tools', agentId, mcpConfig?.url],
     queryFn: async () => {
-      const response = await backendApi.get(`/agents/${agentId}/custom-mcp-tools`, {
+      const response = await backendApi.get(`/api/agents/${agentId}/custom-mcp-tools`, {
         headers: {
           'X-MCP-URL': mcpConfig.url,
           'X-MCP-Type': mcpConfig.type || 'sse',
@@ -37,7 +37,7 @@ export const useCustomMCPToolsData = (agentId: string, mcpConfig: any) => {
 
   const updateToolsMutation = useMutation({
     mutationFn: async (enabledTools: string[]) => {
-      const response = await backendApi.post(`/agents/${agentId}/custom-mcp-tools`, {
+      const response = await backendApi.post(`/api/agents/${agentId}/custom-mcp-tools`, {
         url: mcpConfig.url,
         type: mcpConfig.type || 'sse',
         enabled_tools: enabledTools,

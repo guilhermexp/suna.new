@@ -51,7 +51,7 @@ export const useAnalyzeJsonForImport = () => {
   return useMutation<JsonAnalysisResult, Error, JsonAnalysisRequest>({
     mutationFn: async (request) => {
       try {
-        const response = await backendApi.post('/agents/json/analyze', request);
+        const response = await backendApi.post('/api/agents/json/analyze', request);
         return response.data;
       } catch (error: any) {
         const message = error.response?.data?.detail || error.message || 'Failed to analyze JSON';
@@ -68,7 +68,7 @@ export const useImportAgentFromJson = () => {
   return useMutation<JsonImportResult, Error, JsonImportRequest>({
     mutationFn: async (request) => {
       try {
-        const response = await backendApi.post('/agents/json/import', request);
+        const response = await backendApi.post('/api/agents/json/import', request);
         return response.data;
       } catch (error: any) {
         const errorData = error.response?.data;

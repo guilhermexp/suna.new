@@ -95,7 +95,7 @@ export default function ComposioTestPage() {
           test_user_id: userId.trim(),
           auth_scheme: authScheme,
         });
-        response = await backendApi.post(`/composio/test-toolkit-authentication?${queryParams}`);
+        response = await backendApi.post(`/api/composio/test-toolkit-authentication?${queryParams}`);
       } else {
         response = await backendApi.post('/api/composio/test-authentication', {
           auth_config_id: authConfigId.trim(),
@@ -138,7 +138,7 @@ export default function ComposioTestPage() {
           test_user_id: userId.trim(),
           auth_scheme: authScheme,
         });
-        response = await backendApi.post(`/composio/demo/test-toolkit?${queryParams}`);
+        response = await backendApi.post(`/api/composio/demo/test-toolkit?${queryParams}`);
       } else {
         response = await backendApi.post('/api/composio/demo/test-auth', {
           auth_config_id: authConfigId.trim(),

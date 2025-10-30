@@ -52,7 +52,7 @@ export const ComposioToolsManager: React.FC<ComposioToolsManagerProps> = ({
       if (!open || !agentId || !profileId) return;
 
       try {
-        const response = await backendApi.get(`/agents/${agentId}`);
+        const response = await backendApi.get(`/api/agents/${agentId}`);
         if (response.success && response.data) {
           const agent = response.data;
           const composioMcps = agent.custom_mcps?.filter((mcp: any) =>
@@ -81,7 +81,7 @@ export const ComposioToolsManager: React.FC<ComposioToolsManagerProps> = ({
 
     try {
       const mcpConfigResponse = await composioApi.getMcpConfigForProfile(currentProfile.profile_id);
-      const response = await backendApi.put(`/agents/${agentId}/custom-mcp-tools`, {
+      const response = await backendApi.put(`/api/agents/${agentId}/custom-mcp-tools`, {
         custom_mcps: [{
           ...mcpConfigResponse.mcp_config,
           enabledTools: selectedTools

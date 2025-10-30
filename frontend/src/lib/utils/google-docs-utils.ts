@@ -54,7 +54,7 @@ export const handleGoogleDocsAuth = async (docPath: string, sandboxUrl: string) 
     }));
     
     const currentUrl = encodeURIComponent(window.location.href);
-    const response = await backendApi.get(`/google/auth-url?return_url=${currentUrl}`);
+    const response = await backendApi.get(`/api/google/auth-url?return_url=${currentUrl}`);
     
     if (!response.success) {
       throw new Error(response.error?.message || 'Failed to get auth URL');
@@ -85,7 +85,7 @@ export const handleGoogleDocsUpload = async (sandboxUrl: string, docPath: string
       throw new Error('User not authenticated');
     }
 
-    const response = await backendApi.post('/document-tools/convert-and-upload-to-docs', {
+    const response = await backendApi.post('/api/document-tools/convert-and-upload-to-docs', {
       doc_path: docPath,
       sandbox_url: sandboxUrl,
     }, {

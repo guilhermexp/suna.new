@@ -64,7 +64,7 @@ export function CreditPurchaseModal({
         setIsProcessing(true);
         setError(null);
         try {
-            const response = await backendApi.post('/billing/purchase-credits', {
+            const response = await backendApi.post('/api/billing/purchase-credits', {
                 amount_dollars: amount,
                 success_url: `${window.location.origin}/dashboard?credit_purchase=success`,
                 cancel_url: `${window.location.origin}/dashboard?credit_purchase=cancelled`

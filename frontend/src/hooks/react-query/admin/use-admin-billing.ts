@@ -34,7 +34,7 @@ interface GrantCreditsRequest {
 export function useSearchUser() {
   return useMutation({
     mutationFn: async (request: UserSearchRequest) => {
-      const response = await backendApi.post('/admin/billing/user/search', request);
+      const response = await backendApi.post('/api/admin/billing/user/search', request);
       if (response.error) {
         throw new Error(response.error.message);
       }
@@ -48,7 +48,7 @@ export function useUserBillingSummary(userId: string | null) {
     queryKey: ['admin', 'billing', 'user', userId],
     queryFn: async () => {
       if (!userId) return null;
-      const response = await backendApi.get(`/admin/billing/user/${userId}/summary`);
+      const response = await backendApi.get(`/api/admin/billing/user/${userId}/summary`);
       if (response.error) {
         throw new Error(response.error.message);
       }
@@ -69,7 +69,7 @@ export function useUserTransactions(userId: string | null, limit = 100, offset =
       });
       if (typeFilter) params.append('type_filter', typeFilter);
       
-      const response = await backendApi.get(`/admin/billing/user/${userId}/transactions?${params}`);
+      const response = await backendApi.get(`/api/admin/billing/user/${userId}/transactions?${params}`);
       if (response.error) {
         throw new Error(response.error.message);
       }
@@ -82,7 +82,7 @@ export function useUserTransactions(userId: string | null, limit = 100, offset =
 export function useAdjustCredits() {
   return useMutation({
     mutationFn: async (request: CreditAdjustmentRequest) => {
-      const response = await backendApi.post('/admin/billing/credits/adjust', request);
+      const response = await backendApi.post('/api/admin/billing/credits/adjust', request);
       if (response.error) {
         throw new Error(response.error.message);
       }
@@ -94,7 +94,7 @@ export function useAdjustCredits() {
 export function useProcessRefund() {
   return useMutation({
     mutationFn: async (request: RefundRequest) => {
-      const response = await backendApi.post('/admin/billing/refund', request);
+      const response = await backendApi.post('/api/admin/billing/refund', request);
       if (response.error) {
         throw new Error(response.error.message);
       }
@@ -106,7 +106,7 @@ export function useProcessRefund() {
 export function useGrantBulkCredits() {
   return useMutation({
     mutationFn: async (request: GrantCreditsRequest) => {
-      const response = await backendApi.post('/admin/billing/credits/grant-bulk', request);
+      const response = await backendApi.post('/api/admin/billing/credits/grant-bulk', request);
       if (response.error) {
         throw new Error(response.error.message);
       }
@@ -118,7 +118,7 @@ export function useGrantBulkCredits() {
 export function useMigrateUserToCredits() {
   return useMutation({
     mutationFn: async (userId: string) => {
-      const response = await backendApi.post(`/admin/billing/migrate-user/${userId}`);
+      const response = await backendApi.post(`/api/admin/billing/migrate-user/${userId}`);
       if (response.error) {
         throw new Error(response.error.message);
       }

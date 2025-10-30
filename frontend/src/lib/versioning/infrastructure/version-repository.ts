@@ -43,14 +43,14 @@ export class ApiVersionRepository implements IVersionRepository {
 
   async getAllVersions(agentId: string): Promise<AgentVersion[]> {
     const versions = await this.apiClient.get<VersionResponse[]>(
-      `/agents/${agentId}/versions`
+      `/api/agents/${agentId}/versions`
     );
     return versions.map(v => this.toAgentVersion(v));
   }
 
   async getVersion(agentId: string, versionId: string): Promise<AgentVersion> {
     const version = await this.apiClient.get<VersionResponse>(
-      `/agents/${agentId}/versions/${versionId}`
+      `/api/agents/${agentId}/versions/${versionId}`
     );
     return this.toAgentVersion(version);
   }
@@ -60,14 +60,14 @@ export class ApiVersionRepository implements IVersionRepository {
     request: CreateVersionRequest
   ): Promise<AgentVersion> {
     const version = await this.apiClient.post<VersionResponse>(
-      `/agents/${agentId}/versions`,
+      `/api/agents/${agentId}/versions`,
       request
     );
     return this.toAgentVersion(version);
   }
 
   async activateVersion(agentId: string, versionId: string): Promise<void> {
-    await this.apiClient.put(`/agents/${agentId}/versions/${versionId}/activate`);
+    await this.apiClient.put(`/api/agents/${agentId}/versions/${versionId}/activate`);
   }
 
   async compareVersions(
@@ -79,7 +79,7 @@ export class ApiVersionRepository implements IVersionRepository {
       version1: VersionResponse;
       version2: VersionResponse;
       differences: any[];
-    }>(`/agents/${agentId}/versions/compare/${version1Id}/${version2Id}`);
+    }>(`/api/agents/${agentId}/versions/compare/${version1Id}/${version2Id}`);
 
     return {
       version1: this.toAgentVersion(response.version1),
@@ -93,7 +93,7 @@ export class ApiVersionRepository implements IVersionRepository {
     versionId: string
   ): Promise<AgentVersion> {
     const version = await this.apiClient.post<VersionResponse>(
-      `/agents/${agentId}/versions/${versionId}/rollback`
+      `/api/agents/${agentId}/versions/${versionId}/rollback`
     );
     return this.toAgentVersion(version);
   }
@@ -104,7 +104,7 @@ export class ApiVersionRepository implements IVersionRepository {
     request: UpdateVersionDetailsRequest
   ): Promise<AgentVersion> {
     const version = await this.apiClient.put<VersionResponse>(
-      `/agents/${agentId}/versions/${versionId}/details`,
+      `/api/agents/${agentId}/versions/${versionId}/details`,
       request
     );
     return this.toAgentVersion(version);

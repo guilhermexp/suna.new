@@ -122,7 +122,7 @@ export const handleGoogleAuth = async (presentationPath: string, sandboxUrl: str
     
     // Pass the current URL to the backend so it can be included in the OAuth state
     const currentUrl = encodeURIComponent(window.location.href);
-    const response = await backendApi.get(`/google/auth-url?return_url=${currentUrl}`);
+    const response = await backendApi.get(`/api/google/auth-url?return_url=${currentUrl}`);
     
     if (!response.success) {
       throw new Error(response.error?.message || 'Failed to get auth URL');
@@ -151,7 +151,7 @@ export const handleGoogleSlidesUpload = async (sandboxUrl: string, presentationP
     const { data: { session } } = await supabase.auth.getSession();
     
     // Use proper backend API client with authentication and extended timeout for PPTX generation
-    const response = await backendApi.post('/presentation-tools/convert-and-upload-to-slides', {
+    const response = await backendApi.post('/api/presentation-tools/convert-and-upload-to-slides', {
       presentation_path: presentationPath,
       sandbox_url: sandboxUrl,
     }, {
