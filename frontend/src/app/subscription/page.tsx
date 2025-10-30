@@ -28,7 +28,7 @@ export default function SubscriptionRequiredPage() {
 
   const checkBillingStatus = async () => {
     try {
-      const response = await backendApi.get('/billing/subscription');
+      const response = await backendApi.get('/api/billing/subscription');
       setBillingStatus(response.data);
       const hasActiveSubscription = response.data.subscription && 
                                    response.data.subscription.status === 'active' &&

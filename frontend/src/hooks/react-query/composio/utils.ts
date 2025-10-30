@@ -207,7 +207,7 @@ export interface BulkDeleteProfilesResponse {
 export const composioApi = {
   async getCategories(): Promise<CompositoCategoriesResponse> {
     const result = await backendApi.get<CompositoCategoriesResponse>(
-      '/composio/categories',
+      '/api/composio/categories',
       {
         errorContext: { operation: 'load categories', resource: 'Composio categories' },
       }
@@ -276,7 +276,7 @@ export const composioApi = {
 
   async createProfile(request: CreateComposioProfileRequest): Promise<CreateComposioProfileResponse> {
     const result = await backendApi.post<CreateComposioProfileResponse>(
-      '/composio/profiles',
+      '/api/composio/profiles',
       request,
       {
         errorContext: { operation: 'create profile', resource: 'Composio profile' },
@@ -332,7 +332,7 @@ export const composioApi = {
   },
 
   async getToolkitIcon(toolkitSlug: string): Promise<{ success: boolean; icon_url?: string }> {
-    const response = await backendApi.get<{ success: boolean; toolkit_slug: string; icon_url?: string; message?: string }>(`/composio/toolkits/${toolkitSlug}/icon`);
+    const response = await backendApi.get<{ success: boolean; toolkit_slug: string; icon_url?: string; message?: string }>(`/api/composio/toolkits/${toolkitSlug}/icon`);
     return {
       success: response.data.success,
       icon_url: response.data.icon_url

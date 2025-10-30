@@ -48,7 +48,7 @@ export const useComposioAppsWithTriggers = () => {
   return useQuery({
     queryKey: ['composio', 'apps-with-triggers'],
     queryFn: async (): Promise<ComposioAppsWithTriggersResponse> => {
-      const res = await backendApi.get<ComposioAppsWithTriggersResponse>('/composio/triggers/apps');
+      const res = await backendApi.get<ComposioAppsWithTriggersResponse>('/api/composio/triggers/apps');
       if (!res.success) throw new Error(res.error?.message || 'Failed to load apps');
       return res.data!;
     },
@@ -85,7 +85,7 @@ export const useCreateComposioEventTrigger = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (payload: CreateComposioEventTriggerRequest) => {
-      const res = await backendApi.post('/composio/triggers/create', payload);
+      const res = await backendApi.post('/api/composio/triggers/create', payload);
       if (!res.success) {
         throw res.error || new Error('Failed to create trigger');
       }

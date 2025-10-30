@@ -97,7 +97,7 @@ export default function ComposioTestPage() {
         });
         response = await backendApi.post(`/composio/test-toolkit-authentication?${queryParams}`);
       } else {
-        response = await backendApi.post('/composio/test-authentication', {
+        response = await backendApi.post('/api/composio/test-authentication', {
           auth_config_id: authConfigId.trim(),
           user_id: userId.trim(),
           auth_scheme: authScheme,
@@ -140,7 +140,7 @@ export default function ComposioTestPage() {
         });
         response = await backendApi.post(`/composio/demo/test-toolkit?${queryParams}`);
       } else {
-        response = await backendApi.post('/composio/demo/test-auth', {
+        response = await backendApi.post('/api/composio/demo/test-auth', {
           auth_config_id: authConfigId.trim(),
           user_id: userId.trim(),
           auth_scheme: authScheme,
@@ -336,7 +336,7 @@ export default function ComposioTestPage() {
                   variant="outline"
                   onClick={async () => {
                     try {
-                      const response = await backendApi.get('/composio/health');
+                      const response = await backendApi.get('/api/composio/health');
                       if (response.success) {
                         toast.success('Composio service is healthy!');
                       } else {
