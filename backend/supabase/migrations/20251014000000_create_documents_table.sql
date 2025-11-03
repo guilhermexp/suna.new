@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS public.documents (
 
     -- Conflict detection
     last_modified_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
-    etag VARCHAR(64) GENERATED ALWAYS AS (MD5(content || version::text || last_modified_at::text)) STORED,
+    etag VARCHAR(64) GENERATED ALWAYS AS (MD5(content || version::text)) STORED,
 
     -- Timestamps
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,

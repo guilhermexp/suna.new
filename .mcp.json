@@ -5,10 +5,10 @@
       "args": [
         "-y",
         "@supabase/mcp-server-supabase",
-        "--project-ref=qupamuozvmiewijkvxws"
+        "--project-ref=limilsjeyrixfilyinyw"
       ],
       "env": {
-        "SUPABASE_ACCESS_TOKEN": "sbp_000072ce9d1677af9017219e46fda3d02b9f4e2b"
+        "SUPABASE_ACCESS_TOKEN": "sbp_b18ee67522fba451ff0457290a44418af36beec4"
       }
     },
     "railway-mcp": {

@@ -277,7 +277,7 @@ class Configuration:
     SUPABASE_URL: str
     SUPABASE_ANON_KEY: str
     SUPABASE_SERVICE_ROLE_KEY: str
-    SUPABASE_JWT_SECRET: str
+    SUPABASE_JWT_SECRET: Optional[str] = None
     
     # Redis configuration
     REDIS_HOST: str
