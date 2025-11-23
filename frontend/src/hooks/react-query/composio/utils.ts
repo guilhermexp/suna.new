@@ -236,7 +236,7 @@ export const composioApi = {
     }
     
     const result = await backendApi.get<ComposioToolkitsResponse>(
-      `/composio/toolkits${params.toString() ? `?${params.toString()}` : ''}`,
+      `/api/composio/toolkits${params.toString() ? `?${params.toString()}` : ''}`,
       {
         errorContext: { operation: 'load toolkits', resource: 'Composio toolkits' },
       }
@@ -261,7 +261,7 @@ export const composioApi = {
     }
     
     const result = await backendApi.get<ComposioProfilesResponse>(
-      `/composio/profiles${queryParams.toString() ? `?${queryParams.toString()}` : ''}`,
+      `/api/composio/profiles${queryParams.toString() ? `?${queryParams.toString()}` : ''}`,
       {
         errorContext: { operation: 'load profiles', resource: 'Composio profiles' },
       }
@@ -292,7 +292,7 @@ export const composioApi = {
 
   async getMcpConfigForProfile(profileId: string): Promise<ComposioMcpConfigResponse> {
     const result = await backendApi.get<ComposioMcpConfigResponse>(
-      `/composio/profiles/${profileId}/mcp-config`,
+      `/api/composio/profiles/${profileId}/mcp-config`,
       {
         errorContext: { operation: 'get MCP config', resource: 'Composio profile MCP config' },
       }
@@ -307,7 +307,7 @@ export const composioApi = {
 
   async discoverTools(profileId: string): Promise<{ success: boolean; tools: any[]; toolkit_name: string; total_tools: number }> {
     const result = await backendApi.post<{ success: boolean; tools: any[]; toolkit_name: string; total_tools: number }>(
-      `/composio/discover-tools/${profileId}`,
+      `/api/composio/discover-tools/${profileId}`,
       {},
       {
         errorContext: { operation: 'discover tools', resource: 'Composio profile tools' },
@@ -341,7 +341,7 @@ export const composioApi = {
 
   async getToolkitDetails(toolkitSlug: string): Promise<DetailedComposioToolkitResponse> {
     const result = await backendApi.get<DetailedComposioToolkitResponse>(
-      `/composio/toolkits/${toolkitSlug}/details`,
+      `/api/composio/toolkits/${toolkitSlug}/details`,
       {
         errorContext: { operation: 'get toolkit details', resource: 'Composio toolkit details' },
       }
@@ -356,7 +356,7 @@ export const composioApi = {
 
   async getTools(toolkitSlug: string, limit: number = 50): Promise<ComposioToolsResponse> {
     const result = await backendApi.post<ComposioToolsResponse>(
-      `/composio/tools/list`,
+      `/api/composio/tools/list`,
       {
         toolkit_slug: toolkitSlug,
         limit
@@ -429,12 +429,12 @@ export const composioApi = {
       profile_name: profileName
     });
     
-    const result = await backendApi.get<{ 
-      available: boolean; 
-      message: string; 
-      suggestions: string[] 
+    const result = await backendApi.get<{
+      available: boolean;
+      message: string;
+      suggestions: string[]
     }>(
-      `/composio/profiles/check-name-availability?${params.toString()}`,
+      `/api/composio/profiles/check-name-availability?${params.toString()}`,
       {
         errorContext: { operation: 'check profile name', resource: 'Composio profile' },
       }

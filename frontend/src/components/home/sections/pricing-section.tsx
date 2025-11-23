@@ -28,7 +28,6 @@ import {
 } from '@/lib/api';
 import { toast } from 'sonner';
 import { isLocalMode, isYearlyCommitmentDowngrade, isPlanChangeAllowed, getPlanInfo } from '@/lib/config';
-import { useSubscription, useSubscriptionCommitment } from '@/hooks/react-query';
 import { useAuth } from '@/components/AuthProvider';
 import posthog from 'posthog-js';
 
@@ -180,6 +179,7 @@ function PricingTier({
   insideDialog = false,
   billingPeriod = 'monthly' as 'monthly' | 'yearly' | 'yearly_commitment',
 }: PricingTierProps) {
+  const BILLING_DISABLED = true;
   
   // Determine the price to display based on billing period
   const getDisplayPrice = () => {
@@ -211,6 +211,10 @@ function PricingTier({
 
   // Handle subscription/trial start
   const handleSubscribe = async (planStripePriceId: string) => {
+    if (BILLING_DISABLED) {
+      toast.info('Billing disabled');
+      return;
+    }
     if (!isAuthenticated) {
       window.location.href = '/auth?mode=signup';
       return;
@@ -615,11 +619,8 @@ export function PricingSection({
   const { user } = useAuth();
   const isUserAuthenticated = !!user;
 
-  const { data: subscriptionData, isLoading: isFetchingPlan, error: subscriptionQueryError, refetch: refetchSubscription } = useSubscription({ enabled: isUserAuthenticated });
-  const subCommitmentQuery = useSubscriptionCommitment(subscriptionData?.subscription_id, isUserAuthenticated);
-
-  const isAuthenticated = isUserAuthenticated && !!subscriptionData && subscriptionQueryError === null;
-  const currentSubscription = subscriptionData || null;
+  const isAuthenticated = isUserAuthenticated;
+  const currentSubscription = null;
 
   const getDefaultBillingPeriod = useCallback((): 'monthly' | 'yearly' | 'yearly_commitment' => {
     if (!isAuthenticated || !currentSubscription) {
@@ -647,6 +648,7 @@ export function PricingSection({
 
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly' | 'yearly_commitment'>(getDefaultBillingPeriod());
   const [planLoadingStates, setPlanLoadingStates] = useState<Record<string, boolean>>({});
+  const isFetchingPlan = false; // Billing disabled
 
   useEffect(() => {
     setBillingPeriod(getDefaultBillingPeriod());
@@ -657,8 +659,7 @@ export function PricingSection({
   };
 
   const handleSubscriptionUpdate = () => {
-    refetchSubscription();
-    subCommitmentQuery.refetch();
+    // no-op: billing disabled
     // The useSubscription hook will automatically refetch, so we just need to clear loading states
     setTimeout(() => {
       setPlanLoadingStates({});
@@ -743,4 +744,3 @@ export function PricingSection({
     </section>
   );
 }
-

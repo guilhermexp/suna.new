@@ -54,10 +54,7 @@ class ModelManager:
         # )
         
         return total_cost
-    
-    def get_models_for_tier(self, tier: str) -> List[Model]:
-        return self.registry.get_by_tier(tier, enabled_only=True)
-    
+
     def get_litellm_params(self, model_id: str, **override_params) -> Dict[str, Any]:
         """Get complete LiteLLM parameters for a model from the registry."""
         model = self.get_model(model_id)
@@ -77,28 +74,27 @@ class ModelManager:
     
     def get_models_with_capability(self, capability: ModelCapability) -> List[Model]:
         return self.registry.get_by_capability(capability, enabled_only=True)
-    
+
     def select_best_model(
         self,
-        tier: str,
         required_capabilities: Optional[List[ModelCapability]] = None,
         min_context_window: Optional[int] = None,
         prefer_cheaper: bool = False
     ) -> Optional[Model]:
-        models = self.get_models_for_tier(tier)
-        
+        models = self.registry.get_all(enabled_only=True)
+
         if required_capabilities:
             models = [
                 m for m in models
                 if all(cap in m.capabilities for cap in required_capabilities)
             ]
-        
+
         if min_context_window:
             models = [m for m in models if m.context_window >= min_context_window]
-        
+
         if not models:
             return None
-        
+
         if prefer_cheaper and any(m.pricing for m in models):
             models_with_pricing = [m for m in models if m.pricing]
             if models_with_pricing:
@@ -111,11 +107,11 @@ class ModelManager:
                 models,
                 key=lambda m: (-m.priority, not m.recommended)
             )
-        
+
         return models[0] if models else None
-    
-    def get_default_model(self, tier: str = "free") -> Optional[Model]:
-        models = self.get_models_for_tier(tier)
+
+    def get_default_model(self) -> Optional[Model]:
+        models = self.registry.get_all(enabled_only=True)
         
         recommended = [m for m in models if m.recommended]
         if recommended:
@@ -166,75 +162,38 @@ class ModelManager:
             } if model.pricing else None,
             "enabled": model.enabled,
             "beta": model.beta,
-            "tier_availability": model.tier_availability,
             "priority": model.priority,
             "recommended": model.recommended,
         }
-    
+
     def list_available_models(
         self,
-        tier: Optional[str] = None,
         include_disabled: bool = False
     ) -> List[Dict[str, Any]]:
-        # logger.debug(f"list_available_models called with tier='{tier}', include_disabled={include_disabled}")
-        
-        if tier:
-            models = self.registry.get_by_tier(tier, enabled_only=not include_disabled)
-            # logger.debug(f"Found {len(models)} models for tier '{tier}'")
-        else:
-            models = self.registry.get_all(enabled_only=not include_disabled)
-            # logger.debug(f"Found {len(models)} total models")
-        
+        # logger.debug(f"list_available_models called with include_disabled={include_disabled}")
+
+        models = self.registry.get_all(enabled_only=not include_disabled)
+        # logger.debug(f"Found {len(models)} total models")
+
         if models:
             model_names = [m.name for m in models]
             # logger.debug(f"Models: {model_names}")
         else:
-            logger.warning(f"No models found for tier '{tier}' - this might indicate a configuration issue")
-        
+            logger.warning("No models found - this might indicate a configuration issue")
+
         models = sorted(
             models,
-            key=lambda m: (not m.is_free_tier, -m.priority, m.name)
+            key=lambda m: (-m.priority, m.name)
         )
         
         return [self.format_model_info(m.id) for m in models]
     
     def get_legacy_constants(self) -> Dict:
         return self.registry.to_legacy_format()
-    
-    async def get_default_model_for_user(self, client, user_id: str) -> str:
-        try:
-            from core.utils.config import config, EnvMode
-            if config.ENV_MODE == EnvMode.LOCAL:
-                return PREMIUM_MODEL_ID
-                
-            from core.billing.subscription_service import subscription_service
-            
-            subscription_info = await subscription_service.get_subscription(user_id)
-            subscription = subscription_info.get('subscription')
-            
-            is_paid_tier = False
-            if subscription:
-                price_id = None
-                if subscription.get('items') and subscription['items'].get('data') and len(subscription['items']['data']) > 0:
-                    price_id = subscription['items']['data'][0]['price']['id']
-                else:
-                    price_id = subscription.get('price_id')
-                
-                # Check if this is a paid tier by looking at the tier info
-                tier_info = subscription_info.get('tier', {})
-                if tier_info and tier_info.get('name') != 'free' and tier_info.get('name') != 'none':
-                    is_paid_tier = True
-            
-            if is_paid_tier:
-                # logger.debug(f"Setting Default Premium Model for paid user {user_id}")
-                return PREMIUM_MODEL_ID
-            else:
-                # logger.debug(f"Setting Default Free Model for free user {user_id}")
-                return FREE_MODEL_ID
-                
-        except Exception as e:
-            logger.warning(f"Failed to determine user tier for {user_id}: {e}")
-            return FREE_MODEL_ID
+
+    def get_default_model_for_user(self, client=None, user_id: str = None) -> str:
+        """Get the default model for any user (always returns premium model since billing is removed)."""
+        return PREMIUM_MODEL_ID
 
 
 model_manager = ModelManager() 

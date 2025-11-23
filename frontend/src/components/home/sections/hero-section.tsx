@@ -10,9 +10,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
 import {
-  BillingError,
   AgentRunLimitError,
-  ProjectLimitError,
 } from '@/lib/api';
 import { useInitiateAgentMutation } from '@/hooks/react-query/dashboard/use-initiate-agent';
 import { useThreadQuery } from '@/hooks/react-query/threads/use-threads';
@@ -27,12 +25,9 @@ import {
   DialogTitle,
   DialogOverlay,
 } from '@/components/ui/dialog';
-import { BillingErrorAlert } from '@/components/billing/usage-limit-alert';
-import { useBillingError } from '@/hooks/useBillingError';
 import { useAccounts } from '@/hooks/use-accounts';
 import { isLocalMode, config } from '@/lib/config';
 import { toast } from 'sonner';
-import { BillingModal } from '@/components/billing/billing-modal';
 import GitHubSignIn from '@/components/GithubSignIn';
 import { ChatInput, ChatInputHandles } from '@/components/thread/chat-input/chat-input';
 import { normalizeFilenameToNFC } from '@/lib/utils/unicode';
@@ -106,11 +101,8 @@ export function HeroSection() {
     initializeFromAgents 
   } = useAgentSelection();
   const { user, isLoading } = useAuth();
-  const { billingError, handleBillingError, clearBillingError } =
-    useBillingError();
   const { data: accounts } = useAccounts({ enabled: !!user });
   const personalAccount = accounts?.find((account) => account.personal_account);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const initiateAgentMutation = useInitiateAgentMutation();
   const [initiatedThreadId, setInitiatedThreadId] = useState<string | null>(null);
   const threadQuery = useThreadQuery(initiatedThreadId || '');
@@ -254,18 +246,14 @@ export function HeroSection() {
       chatInputRef.current?.clearPendingFiles();
       setInputValue('');
     } catch (error: any) {
-      if (error instanceof BillingError) {
-        setShowPaymentModal(true);
-      } else if (error instanceof AgentRunLimitError) {
+      if (error instanceof AgentRunLimitError) {
         const { running_thread_ids, running_count } = error.detail;
-        
+
         setAgentLimitData({
           runningCount: running_count,
           runningThreadIds: running_thread_ids,
         });
         setShowAgentLimitDialog(true);
-      } else if (error instanceof ProjectLimitError) {
-        setShowPaymentModal(true);
       } else {
         const isConnectionError =
           error instanceof TypeError &&
@@ -283,11 +271,7 @@ export function HeroSection() {
 
   return (
     <section id="hero" className="w-full relative overflow-hidden">
-      <BillingModal 
-        open={showPaymentModal} 
-        onOpenChange={setShowPaymentModal}
-        showUsageLimitAlert={true}
-      />
+      
       <div className="relative flex flex-col items-center w-full px-4 sm:px-6">
         {/* Left side flickering grid with gradient fades */}
         <div className="hidden sm:block absolute left-0 top-0 h-[500px] sm:h-[600px] md:h-[800px] w-1/4 sm:w-1/3 -z-10 overflow-hidden">
@@ -491,16 +475,6 @@ export function HeroSection() {
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* Add Billing Error Alert here */}
-      <BillingErrorAlert
-        message={billingError?.message}
-        currentUsage={billingError?.currentUsage}
-        limit={billingError?.limit}
-        accountId={personalAccount?.account_id}
-        onDismiss={clearBillingError}
-        isOpen={!!billingError}
-      />
 
       {agentLimitData && (
         <AgentRunLimitDialog

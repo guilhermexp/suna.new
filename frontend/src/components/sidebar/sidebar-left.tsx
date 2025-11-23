@@ -193,36 +193,8 @@ export function SidebarLeft({
               </span>
             </SidebarMenuButton>
           </Link>
-          <Link href="/triggers">
-            <SidebarMenuButton
-              className={cn('touch-manipulation mt-1', {
-                'bg-accent text-accent-foreground font-medium': pathname === '/triggers',
-              })}
-              onClick={() => {
-                if (isMobile) setOpenMobile(false);
-              }}
-            >
-              <Zap className="h-4 w-4 mr-1" />
-              <span className="flex items-center justify-between w-full">
-                Triggers
-              </span>
-            </SidebarMenuButton>
-          </Link>
-          <Link href="/knowledge">
-            <SidebarMenuButton
-              className={cn('touch-manipulation mt-1', {
-                'bg-accent text-accent-foreground font-medium': pathname === '/knowledge',
-              })}
-              onClick={() => {
-                if (isMobile) setOpenMobile(false);
-              }}
-            >
-              <BookOpen className="h-4 w-4 mr-1" />
-              <span className="flex items-center justify-between w-full">
-                Knowledge Base
-              </span>
-            </SidebarMenuButton>
-          </Link>
+          
+          
           <Link href="/projects">
             <SidebarMenuButton
               className={cn('touch-manipulation mt-1', {
@@ -238,36 +210,24 @@ export function SidebarLeft({
               </span>
             </SidebarMenuButton>
           </Link>
-          <Link href="/calendar">
+
+          <Link href="/knowledge">
             <SidebarMenuButton
               className={cn('touch-manipulation mt-1', {
-                'bg-accent text-accent-foreground font-medium': pathname === '/calendar',
+                'bg-accent text-accent-foreground font-medium': pathname === '/knowledge',
               })}
               onClick={() => {
                 if (isMobile) setOpenMobile(false);
               }}
             >
-              <Calendar className="h-4 w-4 mr-1" />
+              <BookOpen className="h-4 w-4 mr-1" />
               <span className="flex items-center justify-between w-full">
-                Calendar
+                Knowledge Base
               </span>
             </SidebarMenuButton>
           </Link>
-          <Link href="/finance-control">
-            <SidebarMenuButton
-              className={cn('touch-manipulation mt-1', {
-                'bg-accent text-accent-foreground font-medium': pathname === '/finance-control',
-              })}
-              onClick={() => {
-                if (isMobile) setOpenMobile(false);
-              }}
-            >
-              <DollarSign className="h-4 w-4 mr-1" />
-              <span className="flex items-center justify-between w-full">
-                Finance Control
-              </span>
-            </SidebarMenuButton>
-          </Link>
+          
+          
           {(
             <SidebarMenu>
               <Collapsible

@@ -80,13 +80,14 @@ class ContextManager:
                 keep_length = max_length - 150  # Reserve space for truncation message
                 start_length = keep_length // 2
                 end_length = keep_length - start_length
-                
+
                 start_part = json_str[:start_length]
                 end_part = json_str[-end_length:] if end_length > 0 else ""
-                
+
                 return start_part + f"\n\n... (middle truncated) ...\n\n" + end_part + f"\n\nThis message is too long, repeat relevant information in your response to remember it"
             else:
-                return msg_content
+                # Always return string to ensure consistency across all providers
+                return json_str
   
     def compress_tool_result_messages(self, messages: List[Dict[str, Any]], llm_model: str, max_tokens: Optional[int], token_threshold: int = 1000, uncompressed_total_token_count: Optional[int] = None) -> List[Dict[str, Any]]:
         """Compress the tool result messages except the most recent one.

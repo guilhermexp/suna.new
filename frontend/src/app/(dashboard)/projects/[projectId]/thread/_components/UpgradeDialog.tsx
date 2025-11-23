@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Brain, Clock, Crown, Sparkles, Zap } from 'lucide-react';
 import { UpgradeDialog as UnifiedUpgradeDialog } from '@/components/ui/upgrade-dialog';
-import { BillingModal } from '@/components/billing/billing-modal';
 
 interface UpgradeDialogProps {
   open: boolean;
@@ -10,21 +9,11 @@ interface UpgradeDialogProps {
 }
 
 export function UpgradeDialog({ open, onOpenChange, onDismiss }: UpgradeDialogProps) {
-  const [showBillingModal, setShowBillingModal] = useState(false);
-
   const handleUpgradeClick = () => {
-    // Close the upgrade dialog and open the billing modal
+    // In self-hosted/personal mode, just close the dialog and mark as dismissed
     onOpenChange(false);
-    setShowBillingModal(true);
     localStorage.setItem('suna_upgrade_dialog_displayed', 'true');
-  };
-
-  const handleBillingModalClose = (isOpen: boolean) => {
-    setShowBillingModal(isOpen);
-    if (!isOpen) {
-      // If billing modal is closed, we can consider the upgrade flow complete
-      onDismiss();
-    }
+    onDismiss();
   };
 
   return (
@@ -88,13 +77,6 @@ export function UpgradeDialog({ open, onOpenChange, onDismiss }: UpgradeDialogPr
         </div>
       </UnifiedUpgradeDialog>
 
-      {/* Billing Modal */}
-      <BillingModal
-        open={showBillingModal}
-        onOpenChange={handleBillingModalClose}
-        returnUrl={typeof window !== 'undefined' ? window?.location?.href || '/' : '/'}
-        showUsageLimitAlert={true}
-      />
     </>
   );
-} 
+}

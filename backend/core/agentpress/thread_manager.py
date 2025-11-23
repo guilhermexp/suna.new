@@ -13,24 +13,19 @@ from core.agentpress.response_processor import ResponseProcessor, ProcessorConfi
 from core.agentpress.error_processor import ErrorProcessor
 from core.services.supabase import DBConnection
 from core.utils.logger import logger
-from langfuse.client import StatefulGenerationClient, StatefulTraceClient
-from core.services.langfuse import langfuse
 from datetime import datetime, timezone
-from core.billing.billing_integration import billing_integration
+# Billing removed - usage tracking removed
 
 ToolChoice = Literal["auto", "required", "none"]
 
 class ThreadManager:
     """Manages conversation threads with LLM models and tool execution."""
 
-    def __init__(self, trace: Optional[StatefulTraceClient] = None, agent_config: Optional[dict] = None):
+    def __init__(self, trace: Optional[Any] = None, agent_config: Optional[dict] = None):
         self.db = DBConnection()
         self.tool_registry = ToolRegistry()
-        
+
         self.trace = trace
-        if not self.trace:
-            self.trace = langfuse.trace(name="anonymous:thread_manager")
-            
         self.agent_config = agent_config
         self.response_processor = ResponseProcessor(
             tool_registry=self.tool_registry,
@@ -155,22 +150,10 @@ class ThreadManager:
                 else:
                     logger.debug(f"❌ NO CACHE: All {prompt_tokens} tokens processed fresh")
 
-                deduct_result = await billing_integration.deduct_usage(
-                    account_id=user_id,
-                    prompt_tokens=prompt_tokens,
-                    completion_tokens=completion_tokens,
-                    model=model or "unknown",
-                    message_id=saved_message['message_id'],
-                    cache_read_tokens=cache_read_tokens,
-                    cache_creation_tokens=cache_creation_tokens
-                )
-                
-                if deduct_result.get('success'):
-                    logger.info(f"Successfully deducted ${deduct_result.get('cost', 0):.6f}")
-                else:
-                    logger.error(f"Failed to deduct credits: {deduct_result}")
+                # Billing removed - just log token usage for monitoring
+                logger.info(f"Token usage: prompt={prompt_tokens}, completion={completion_tokens}, cache_read={cache_read_tokens}, cache_creation={cache_creation_tokens}, model={model or 'unknown'}")
         except Exception as e:
-            logger.error(f"Error handling billing: {str(e)}", exc_info=True)
+            logger.error(f"Error handling token tracking: {str(e)}", exc_info=True)
 
     async def get_llm_messages(self, thread_id: str) -> List[Dict[str, Any]]:
         """Get all messages for a thread."""
@@ -210,6 +193,16 @@ class ThreadManager:
                     content['message_id'] = item['message_id']
                     messages.append(content)
 
+            # Ensure tool message content is always a string (fix for Anthropic API)
+            for msg in messages:
+                if msg.get('role') == 'tool':
+                    # Convert dict/list content to JSON string
+                    if 'content' in msg and isinstance(msg['content'], (dict, list)):
+                        msg['content'] = json.dumps(msg['content'])
+                    # Remove 'name' field as it's not part of Anthropic tool result format
+                    if 'name' in msg:
+                        del msg['name']
+
             return messages
 
         except Exception as e:
@@ -229,7 +222,7 @@ class ThreadManager:
         tool_choice: ToolChoice = "auto",
         native_max_auto_continues: int = 25,
         max_xml_tool_calls: int = 0,
-        generation: Optional[StatefulGenerationClient] = None,
+        generation: Optional[Any] = None,
     ) -> Union[Dict[str, Any], AsyncGenerator]:
         """Run a conversation thread with LLM integration and tool execution."""
         logger.debug(f"🚀 Starting thread execution for {thread_id} with model {llm_model}")
@@ -277,7 +270,7 @@ class ThreadManager:
     async def _execute_run(
         self, thread_id: str, system_prompt: Dict[str, Any], llm_model: str,
         llm_temperature: float, llm_max_tokens: Optional[int], tool_choice: ToolChoice,
-        config: ProcessorConfig, stream: bool, generation: Optional[StatefulGenerationClient],
+        config: ProcessorConfig, stream: bool, generation: Optional[Any],
         auto_continue_state: Dict[str, Any], temporary_message: Optional[Dict[str, Any]] = None
     ) -> Union[Dict[str, Any], AsyncGenerator]:
         """Execute a single LLM run."""
@@ -388,7 +381,7 @@ class ThreadManager:
     async def _auto_continue_generator(
         self, thread_id: str, system_prompt: Dict[str, Any], llm_model: str,
         llm_temperature: float, llm_max_tokens: Optional[int], tool_choice: ToolChoice,
-        config: ProcessorConfig, stream: bool, generation: Optional[StatefulGenerationClient],
+        config: ProcessorConfig, stream: bool, generation: Optional[Any],
         auto_continue_state: Dict[str, Any], temporary_message: Optional[Dict[str, Any]],
         native_max_auto_continues: int
     ) -> AsyncGenerator:

@@ -45,7 +45,6 @@ def run_pytest(
     if coverage:
         cmd.extend([
             "--cov=core",
-            "--cov=billing",
             "--cov-report=term-missing",
             "--cov-report=html",
             "--cov-report=xml"

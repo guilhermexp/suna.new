@@ -52,10 +52,7 @@ def setup_api_keys() -> None:
     for provider in providers:
         key = getattr(config, f"{provider}_API_KEY")
         if key:
-            # logger.debug(f"API key set for provider: {provider}")
             pass
-        else:
-            logger.warning(f"No API key found for provider: {provider}")
 
     # Set up OpenRouter API base if not already set
     if config.OPENROUTER_API_KEY and config.OPENROUTER_API_BASE:
@@ -69,7 +66,7 @@ def setup_api_keys() -> None:
         os.environ["AWS_BEARER_TOKEN_BEDROCK"] = bedrock_token
         logger.debug("AWS Bedrock bearer token configured")
     else:
-        logger.warning("AWS_BEARER_TOKEN_BEDROCK not configured - Bedrock models will not be available")
+        pass
 
 def setup_provider_router(openai_compatible_api_key: str = None, openai_compatible_api_base: str = None):
     global provider_router

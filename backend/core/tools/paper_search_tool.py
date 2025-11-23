@@ -2,15 +2,13 @@ from typing import Optional
 import asyncio
 import structlog
 import json
-from decimal import Decimal
 from exa_py import Exa
 from exa_py.websets.types import CreateWebsetParameters, CreateEnrichmentParameters
 from core.agentpress.tool import Tool, ToolResult, openapi_schema
 from core.utils.config import config, EnvMode
 from core.utils.logger import logger
 from core.agentpress.thread_manager import ThreadManager
-from core.billing.credit_manager import CreditManager
-from core.billing.config import TOKEN_PRICE_MULTIPLIER
+# Billing removed - no credit deduction
 from core.services.supabase import DBConnection
 
 
@@ -20,7 +18,7 @@ class PaperSearchTool(Tool):
         self.thread_manager = thread_manager
         self.api_key = config.EXA_API_KEY
         self.db = DBConnection()
-        self.credit_manager = CreditManager()
+        # Billing removed - no credit manager
         self.exa_client = None
         
         if self.api_key:
@@ -48,27 +46,9 @@ class PaperSearchTool(Tool):
         return None, None
     
     async def _deduct_credits(self, user_id: str, num_results: int, thread_id: Optional[str] = None) -> bool:
-        base_cost = Decimal('0.45')
-        total_cost = base_cost * TOKEN_PRICE_MULTIPLIER
-        
-        try:
-            result = await self.credit_manager.use_credits(
-                account_id=user_id,
-                amount=total_cost,
-                description=f"Paper search: {num_results} results",
-                thread_id=thread_id
-            )
-            
-            if result.get('success'):
-                logger.info(f"Deducted ${total_cost:.2f} for paper search ({num_results} results)")
-                return True
-            else:
-                logger.warning(f"Failed to deduct credits: {result.get('error')}")
-                return False
-                
-        except Exception as e:
-            logger.error(f"Error deducting credits: {e}")
-            return False
+        # Billing removed - no credit deduction
+        logger.info(f"Paper search executed: {num_results} results (billing disabled)")
+        return True
 
     @openapi_schema({
         "type": "function",
@@ -107,11 +87,12 @@ class PaperSearchTool(Tool):
             return self.fail_response("Search query is required.")
         
         thread_id, user_id = await self._get_current_thread_and_user()
-        
-        if config.ENV_MODE != EnvMode.LOCAL and (not thread_id or not user_id):
-            return self.fail_response(
-                "No active session context for billing. This tool requires an active agent session."
-            )
+
+        # Billing removed - session check no longer required
+        # if config.ENV_MODE != EnvMode.LOCAL and (not thread_id or not user_id):
+        #     return self.fail_response(
+        #         "No active session context for billing. This tool requires an active agent session."
+        #     )
         
         try:
             logger.info(f"Creating Exa webset for paper search: '{query}' with 10 results")
@@ -244,21 +225,9 @@ class PaperSearchTool(Tool):
                 
                 formatted_results.append(result_entry)
             
-            base_cost = Decimal('0.45')
-            total_cost = base_cost * TOKEN_PRICE_MULTIPLIER
-            
-            if config.ENV_MODE == EnvMode.LOCAL:
-                logger.info("Running in LOCAL mode - skipping billing for paper search")
-                cost_deducted_str = f"${total_cost:.2f} (LOCAL - not charged)"
-            else:
-                credits_deducted = await self._deduct_credits(user_id, len(formatted_results), thread_id)
-                if not credits_deducted:
-                    return self.fail_response(
-                        "Insufficient credits for paper search. "
-                        f"This search costs ${total_cost:.2f} ({len(formatted_results)} results). "
-                        "Please add credits to continue."
-                    )
-                cost_deducted_str = f"${total_cost:.2f}"
+            # Billing removed - no credit deduction
+            await self._deduct_credits(user_id, len(formatted_results), thread_id)
+            cost_deducted_str = "N/A (billing disabled)"
             
             output = {
                 "query": query,

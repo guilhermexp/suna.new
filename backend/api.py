@@ -6,7 +6,10 @@ from fastapi import FastAPI, Request, HTTPException, Response, Depends, APIRoute
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from core.services import redis
-import sentry
+try:
+    import sentry
+except Exception:
+    sentry = None
 from contextlib import asynccontextmanager
 from core.agentpress.thread_manager import ThreadManager
 from core.services.supabase import DBConnection
@@ -15,7 +18,6 @@ from core.utils.config import config, EnvMode
 import asyncio
 from core.utils.logger import logger, structlog
 import time
-from collections import OrderedDict
 
 from pydantic import BaseModel
 import uuid
@@ -23,13 +25,10 @@ import uuid
 from core import api as core_api
 
 from core.sandbox import api as sandbox_api
-from core.billing.api import router as billing_router
-from core.billing.admin import router as billing_admin_router
-from core.admin.users_admin import router as users_admin_router
+ 
 from core.services import transcription as transcription_api
 import sys
-from core.services import email_api
-from core.triggers import api as triggers_api
+ 
 from core.services import api_keys_api
 
 
@@ -40,8 +39,7 @@ db = DBConnection()
 instance_id = "single"
 
 # Rate limiter state
-ip_tracker = OrderedDict()
-MAX_CONCURRENT_IPS = 25
+ 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -69,11 +67,11 @@ async def lifespan(app: FastAPI):
         # Start background tasks
         # asyncio.create_task(core_api.restore_running_agent_runs())
         
-        triggers_api.initialize(db)
-        pipedream_api.initialize(db)
+        
         credentials_api.initialize(db)
         template_api.initialize(db)
         composio_api.initialize(db)
+        triggers_api.initialize(db)
         
         yield
         
@@ -166,35 +164,33 @@ api_router = APIRouter()
 # Include all API routers without individual prefixes
 api_router.include_router(core_api.router)
 api_router.include_router(sandbox_api.router)
-api_router.include_router(billing_router)
+    
 api_router.include_router(api_keys_api.router)
-api_router.include_router(billing_admin_router)
-api_router.include_router(users_admin_router)
+    
+    
 
 from core.mcp_module import api as mcp_api
 from core.credentials import api as credentials_api
 from core.templates import api as template_api
+from core.triggers import api as triggers_api
 
 api_router.include_router(mcp_api.router)
 api_router.include_router(credentials_api.router, prefix="/secure-mcp")
 api_router.include_router(template_api.router, prefix="/templates")
 
 api_router.include_router(transcription_api.router)
-api_router.include_router(email_api.router)
 
 from core.knowledge_base import api as knowledge_base_api
 api_router.include_router(knowledge_base_api.router)
 
-api_router.include_router(triggers_api.router)
+ 
 
-from core.pipedream import api as pipedream_api
-api_router.include_router(pipedream_api.router)
-
-from core.admin import api as admin_api
-api_router.include_router(admin_api.router)
+ 
 
 from core.composio_integration import api as composio_api
 api_router.include_router(composio_api.router)
+
+api_router.include_router(triggers_api.router)
 
 from core.google.google_slides_api import router as google_slides_router
 api_router.include_router(google_slides_router)
@@ -205,11 +201,9 @@ api_router.include_router(google_docs_router)
 from core.projects import router as projects_router
 api_router.include_router(projects_router)
 
-from core.calendar import router as calendar_router
-api_router.include_router(calendar_router, prefix="/calendar")
+ 
 
-from core.finance import router as finance_router
-api_router.include_router(finance_router)
+ 
 
 from core.documents import api as documents_api
 api_router.include_router(documents_api.router)
@@ -221,13 +215,35 @@ api_router.include_router(websocket_api.router)
 async def health_check():
     logger.debug("Health check endpoint called")
     return {
-        "status": "ok", 
+        "status": "ok",
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "instance_id": instance_id
     }
 
+@api_router.get("/models/available")
+async def get_available_models():
+    """Return list of available AI models from the registry"""
+    from core.ai_models.registry import registry
+
+    models_list = []
+    for model in registry.get_all(enabled_only=True):
+        models_list.append({
+            "id": model.id,
+            "display_name": model.name,
+            "requires_subscription": False,
+            "priority": model.priority,
+            "recommended": model.recommended,
+            "capabilities": [cap.value for cap in model.capabilities],
+            "context_window": model.context_window,
+        })
+
+    # Sort by priority (highest first)
+    models_list.sort(key=lambda x: x["priority"], reverse=True)
+
+    return {"models": models_list}
+
 @api_router.get("/health-docker")
-async def health_check():
+async def health_docker_check():
     logger.debug("Health docker check endpoint called")
     try:
         client = await redis.get_client()

@@ -17,6 +17,53 @@ from .config_helper import build_unified_config
 
 router = APIRouter()
 
+# Helper functions for centrally managed agents
+class CentralAgentDefinition:
+    """Simple class to hold central agent definition data"""
+    def __init__(self, name: str):
+        self.name = name
+
+def get_central_agent_definition(metadata: dict):
+    """
+    Get the central agent definition from metadata if it exists.
+    Returns None if the agent is not centrally managed.
+    """
+    if not metadata:
+        return None
+
+    # Check if centrally managed
+    if not metadata.get('centrally_managed'):
+        return None
+
+    # Get the agent name from metadata or use a default
+    agent_name = metadata.get('central_agent_name', metadata.get('name', 'Centrally Managed Agent'))
+    return CentralAgentDefinition(name=agent_name)
+
+def get_default_restrictions(metadata: dict) -> dict:
+    """
+    Get default restrictions for an agent based on its metadata.
+    Returns a dictionary of editable fields.
+    """
+    # Default: all fields are editable
+    default_restrictions = {
+        'name_editable': True,
+        'system_prompt_editable': True,
+        'icon_editable': True,
+        'tools_editable': True,
+        'model_editable': True,
+        'deletable': True
+    }
+
+    # If centrally managed, restrict more fields by default
+    if metadata and metadata.get('centrally_managed'):
+        default_restrictions.update({
+            'name_editable': False,
+            'system_prompt_editable': False,
+            'deletable': False
+        })
+
+    return default_restrictions
+
 @router.put("/agents/{agent_id}", response_model=AgentResponse)
 async def update_agent(
     agent_id: str,

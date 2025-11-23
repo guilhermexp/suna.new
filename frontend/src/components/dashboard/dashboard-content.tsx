@@ -9,13 +9,9 @@ import {
   ChatInputHandles,
 } from '@/components/thread/chat-input/chat-input';
 import {
-  BillingError,
   AgentRunLimitError,
-  ProjectLimitError,
 } from '@/lib/api';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useBillingError } from '@/hooks/useBillingError';
-import { BillingErrorAlert } from '@/components/billing/usage-limit-alert';
 import { useAccounts } from '@/hooks/use-accounts';
 import { useAuth } from '@/components/AuthProvider';
 import { config, isLocalMode, isStagingMode } from '@/lib/config';
@@ -23,7 +19,6 @@ import { useInitiateAgentWithInvalidation } from '@/hooks/react-query/dashboard/
 
 import { useAgents } from '@/hooks/react-query/agents/use-agents';
 import { cn } from '@/lib/utils';
-import { BillingModal } from '@/components/billing/billing-modal';
 import { useAgentSelection } from '@/lib/stores/agent-selection-store';
 import { Examples } from './examples';
 import { AgentExamples } from './examples/agent-examples';
@@ -31,7 +26,6 @@ import { useThreadQuery } from '@/hooks/react-query/threads/use-threads';
 import { normalizeFilenameToNFC } from '@/lib/utils/unicode';
 import { KortixLogo } from '../sidebar/kortix-logo';
 import { AgentRunLimitDialog } from '@/components/thread/agent-run-limit-dialog';
-import { CustomAgentsSection } from './custom-agents-section';
 import { toast } from 'sonner';
 import { ReleaseBadge } from '../auth/release-badge';
 import { useDashboardTour } from '@/hooks/use-dashboard-tour';
@@ -79,8 +73,6 @@ export function DashboardContent() {
     getCurrentAgent
   } = useAgentSelection();
   const [initiatedThreadId, setInitiatedThreadId] = useState<string | null>(null);
-  const { billingError, handleBillingError, clearBillingError } =
-    useBillingError();
   const [showAgentLimitDialog, setShowAgentLimitDialog] = useState(false);
   const [agentLimitData, setAgentLimitData] = useState<{
     runningCount: number;
@@ -94,7 +86,6 @@ export function DashboardContent() {
   const personalAccount = accounts?.find((account) => account.personal_account);
   const chatInputRef = React.useRef<ChatInputHandles>(null);
   const initiateAgentMutation = useInitiateAgentWithInvalidation();
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   // Tour integration
   const {
@@ -215,17 +206,13 @@ export function DashboardContent() {
       chatInputRef.current?.clearPendingFiles();
     } catch (error: any) {
       console.error('Error during submission process:', error);
-      if (error instanceof BillingError) {
-        setShowPaymentModal(true);
-      } else if (error instanceof AgentRunLimitError) {
+      if (error instanceof AgentRunLimitError) {
         const { running_thread_ids, running_count } = error.detail;
         setAgentLimitData({
           runningCount: running_count,
           runningThreadIds: running_thread_ids,
         });
         setShowAgentLimitDialog(true);
-      } else if (error instanceof ProjectLimitError) {
-        setShowPaymentModal(true);
       } else {
         const errorMessage = error instanceof Error ? error.message : 'Operation failed';
         toast.error(errorMessage);
@@ -335,12 +322,6 @@ export function DashboardContent() {
         onDecline={handleWelcomeDecline}
       />
 
-      <BillingModal 
-        open={showPaymentModal} 
-        onOpenChange={setShowPaymentModal}
-        showUsageLimitAlert={true}
-      />
-      
       <div className="flex flex-col h-screen w-full overflow-hidden">
         <div className="flex-1 overflow-y-auto">
           <div className="min-h-full flex flex-col">
@@ -396,26 +377,9 @@ export function DashboardContent() {
                 </div> */}
               </div>
             </div>
-            {enabledEnvironment && !isAuthLoading && (
-              <div className="w-full px-4 pb-8" data-tour="custom-agents">
-                <div className="max-w-7xl mx-auto">
-                  <CustomAgentsSection
-                    onAgentSelect={setSelectedAgent}
-                  />
-                </div>
-              </div>
-            )}
+            
           </div>
         </div>
-        
-        <BillingErrorAlert
-          message={billingError?.message}
-          currentUsage={billingError?.currentUsage}
-          limit={billingError?.limit}
-          accountId={personalAccount?.account_id}
-          onDismiss={clearBillingError}
-          isOpen={!!billingError}
-        />
       </div>
 
       {agentLimitData && (

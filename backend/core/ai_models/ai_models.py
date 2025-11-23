@@ -69,7 +69,6 @@ class Model:
     pricing: Optional[ModelPricing] = None
     enabled: bool = True
     beta: bool = False
-    tier_availability: List[str] = field(default_factory=lambda: ["paid"])
     metadata: Dict[str, Any] = field(default_factory=dict)
     priority: int = 0
     recommended: bool = False
@@ -98,11 +97,7 @@ class Model:
     @property
     def supports_vision(self) -> bool:
         return ModelCapability.VISION in self.capabilities
-    
-    @property
-    def is_free_tier(self) -> bool:
-        return "free" in self.tier_availability
-    
+
     def get_litellm_params(self, **override_params) -> Dict[str, Any]:
         """Get complete LiteLLM parameters for this model, including all configuration."""
         # Import config here to avoid circular imports
@@ -185,7 +180,6 @@ class Model:
             } if self.pricing else None,
             "enabled": self.enabled,
             "beta": self.beta,
-            "tier_availability": self.tier_availability,
             "metadata": self.metadata,
             "priority": self.priority,
             "recommended": self.recommended,

@@ -20,8 +20,6 @@ from core.agentpress.tool import ToolResult
 from core.agentpress.tool_registry import ToolRegistry
 from core.agentpress.xml_tool_parser import XMLToolParser
 from core.agentpress.error_processor import ErrorProcessor
-from langfuse.client import StatefulTraceClient
-from core.services.langfuse import langfuse
 from core.utils.json_helpers import (
     ensure_dict, ensure_list, safe_json_parse, 
     to_json_string, format_for_yield
@@ -87,7 +85,7 @@ class ProcessorConfig:
 class ResponseProcessor:
     """Processes LLM responses, extracting and executing tool calls."""
 
-    def __init__(self, tool_registry: ToolRegistry, add_message_callback: Callable, trace: Optional[StatefulTraceClient] = None, agent_config: Optional[dict] = None):
+    def __init__(self, tool_registry: ToolRegistry, add_message_callback: Callable, trace: Optional[Any] = None, agent_config: Optional[dict] = None):
         """Initialize the ResponseProcessor.
         
         Args:
@@ -98,10 +96,7 @@ class ResponseProcessor:
         """
         self.tool_registry = tool_registry
         self.add_message = add_message_callback
-        
         self.trace = trace
-        if not self.trace:
-            self.trace = langfuse.trace(name="anonymous:response_processor")
             
         # Initialize the XML parser
         self.xml_parser = XMLToolParser()
@@ -114,6 +109,9 @@ class ResponseProcessor:
         if not model_name:
             return False
         lowered = model_name.lower()
+        # Exclude GLM models that use anthropic prefix but aren't real Anthropic models
+        if "glm" in lowered:
+            return False
         return any(keyword in lowered for keyword in ["anthropic", "claude", "302ai", "bedrock/converse"])
 
     def _normalize_content_block(self, block: Any) -> Optional[Dict[str, Any]]:
@@ -741,9 +739,25 @@ class ResponseProcessor:
                             # --- Buffer and Execute Complete Native Tool Calls ---
                             if not hasattr(tool_call_chunk, 'function'): continue
                             idx = tool_call_chunk.index if hasattr(tool_call_chunk, 'index') else 0
-                            # ... (buffer update logic remains same) ...
-                            # ... (check complete logic remains same) ...
-                            has_complete_tool_call = False # Placeholder
+
+                            # Initialize buffer entry if not exists
+                            if idx not in tool_calls_buffer:
+                                tool_calls_buffer[idx] = {
+                                    "id": None,
+                                    "function": {"name": None, "arguments": ""}
+                                }
+
+                            # Update buffer with chunk data
+                            if hasattr(tool_call_chunk, 'id') and tool_call_chunk.id:
+                                tool_calls_buffer[idx]["id"] = tool_call_chunk.id
+                            if hasattr(tool_call_chunk, 'function'):
+                                if hasattr(tool_call_chunk.function, 'name') and tool_call_chunk.function.name:
+                                    tool_calls_buffer[idx]["function"]["name"] = tool_call_chunk.function.name
+                                if hasattr(tool_call_chunk.function, 'arguments') and tool_call_chunk.function.arguments:
+                                    tool_calls_buffer[idx]["function"]["arguments"] += tool_call_chunk.function.arguments
+
+                            # Check if tool call is complete
+                            has_complete_tool_call = False
                             if (tool_calls_buffer.get(idx) and
                                 tool_calls_buffer[idx]['id'] and
                                 tool_calls_buffer[idx]['function']['name'] and
@@ -1263,11 +1277,14 @@ class ResponseProcessor:
                     logger.info(f"✅ BILLING SUCCESS: Saved llm_response_end for call #{auto_continue_count + 1} ({'estimated' if is_estimated else 'exact'} usage)")
                     
                 except Exception as billing_e:
-                    logger.error(f"❌ CRITICAL BILLING FAILURE: Could not save llm_response_end: {str(billing_e)}", exc_info=True)
+                    import traceback
+                    error_str = ErrorProcessor.safe_error_to_string(billing_e)
+                    logger.error(f"❌ CRITICAL BILLING FAILURE: Could not save llm_response_end: {error_str}")
+                    logger.error(f"❌ Billing error traceback: {traceback.format_exc()}")
                     self.trace.event(
-                        name="critical_billing_failure_in_finally", 
-                        level="ERROR", 
-                        status_message=(f"Failed to save llm_response_end for billing: {str(billing_e)}")
+                        name="critical_billing_failure_in_finally",
+                        level="ERROR",
+                        status_message=(f"Failed to save llm_response_end for billing: {error_str}")
                     )
             elif llm_response_end_saved:
                 logger.debug(f"✅ Billing already handled for call #{auto_continue_count + 1} (llm_response_end was saved earlier)")
@@ -1288,7 +1305,8 @@ class ResponseProcessor:
                         generation.end(output=accumulated_content)
                         logger.debug(f"Set generation output: {len(accumulated_content)} chars with usage metrics")
                     except Exception as gen_e:
-                        logger.error(f"Error setting generation output: {str(gen_e)}", exc_info=True)
+                        error_str = ErrorProcessor.safe_error_to_string(gen_e)
+                        logger.error(f"Error setting generation output: {error_str}")
                 
                 # Save and Yield the final thread_run_end status (only if not auto-continuing and finish_reason is not 'length')
                 try:
@@ -1299,8 +1317,9 @@ class ResponseProcessor:
                     )
                     if end_msg_obj: yield format_for_yield(end_msg_obj)
                 except Exception as final_e:
-                    logger.error(f"Error in finally block: {str(final_e)}", exc_info=True)
-                    self.trace.event(name="error_in_finally_block", level="ERROR", status_message=(f"Error in finally block: {str(final_e)}"))
+                    error_str = ErrorProcessor.safe_error_to_string(final_e)
+                    logger.error(f"Error in finally block: {error_str}")
+                    self.trace.event(name="error_in_finally_block", level="ERROR", status_message=(f"Error in finally block: {error_str}"))
 
     async def process_non_streaming_response(
         self,
@@ -1545,7 +1564,8 @@ class ResponseProcessor:
                     generation.end(output=content)
                     logger.debug(f"Set non-streaming generation output: {len(content)} chars with usage metrics")
                 except Exception as gen_e:
-                    logger.error(f"Error setting non-streaming generation output: {str(gen_e)}", exc_info=True)
+                    error_str = ErrorProcessor.safe_error_to_string(gen_e)
+                    logger.error(f"Error setting non-streaming generation output: {error_str}")
             
             # Save and Yield the final thread_run_end status
             end_content = {"status_type": "thread_run_end"}
@@ -1718,8 +1738,9 @@ class ResponseProcessor:
                     })
                     
         except Exception as e:
-            logger.error(f"Error parsing XML tool calls: {e}", exc_info=True)
-            self.trace.event(name="error_parsing_xml_tool_calls", level="ERROR", status_message=(f"Error parsing XML tool calls: {e}"), metadata={"content": content})
+            error_str = ErrorProcessor.safe_error_to_string(e)
+            logger.error(f"Error parsing XML tool calls: {error_str}")
+            self.trace.event(name="error_parsing_xml_tool_calls", level="ERROR", status_message=(f"Error parsing XML tool calls: {error_str}"), metadata={"content": content})
         
         return parsed_data
 
@@ -1804,12 +1825,15 @@ class ResponseProcessor:
             return result
 
         except Exception as e:
-            logger.error(f"❌ CRITICAL ERROR executing tool {function_name}: {str(e)}")
+            import traceback
+            error_str = ErrorProcessor.safe_error_to_string(e)
+            logger.error(f"❌ CRITICAL ERROR executing tool {function_name}: {error_str}")
             logger.error(f"❌ Error type: {type(e).__name__}")
             logger.error(f"❌ Tool call data: {tool_call}")
-            logger.error(f"❌ Full traceback:", exc_info=True)
-            span.end(status_message="critical_error", output=str(e), level="ERROR")
-            return ToolResult(success=False, output=f"Critical error executing tool: {str(e)}")
+            # Don't use exc_info=True with structlog - causes concatenation errors
+            logger.error(f"❌ Full traceback: {traceback.format_exc()}")
+            span.end(status_message="critical_error", output=error_str, level="ERROR")
+            return ToolResult(success=False, output=f"Critical error executing tool: {error_str}")
 
     async def _execute_tools(
         self,
@@ -1933,10 +1957,13 @@ class ResponseProcessor:
             return results
 
         except Exception as e:
-            logger.error(f"❌ CRITICAL ERROR in sequential tool execution: {str(e)}")
+            import traceback
+            error_str = ErrorProcessor.safe_error_to_string(e)
+            logger.error(f"❌ CRITICAL ERROR in sequential tool execution: {error_str}")
             logger.error(f"❌ Error type: {type(e).__name__}")
             logger.error(f"❌ Tool calls data: {tool_calls}")
-            logger.error(f"❌ Full traceback:", exc_info=True)
+            # Don't use exc_info=True with structlog - causes concatenation errors
+            logger.error(f"❌ Full traceback: {traceback.format_exc()}")
 
             # Return partial results plus error results for remaining tools
             completed_results = results if 'results' in locals() else []
@@ -1949,7 +1976,7 @@ class ResponseProcessor:
             error_results = []
             for tool in remaining_tools:
                 try:
-                    error_result = ToolResult(success=False, output=f"Execution error: {str(e)}")
+                    error_result = ToolResult(success=False, output=f"Execution error: {error_str}")
                     error_results.append((tool, error_result))
                 except Exception as result_error:
                     logger.error(f"❌ Failed to create error result for remaining tool: {result_error}")
@@ -2032,18 +2059,21 @@ class ResponseProcessor:
             return processed_results
 
         except Exception as e:
-            logger.error(f"❌ CRITICAL ERROR in parallel tool execution: {str(e)}")
+            import traceback
+            error_str = ErrorProcessor.safe_error_to_string(e)
+            logger.error(f"❌ CRITICAL ERROR in parallel tool execution: {error_str}")
             logger.error(f"❌ Error type: {type(e).__name__}")
             logger.error(f"❌ Tool calls data: {tool_calls}")
-            logger.error(f"❌ Full traceback:", exc_info=True)
-            self.trace.event(name="error_in_parallel_tool_execution", level="ERROR", status_message=(f"Error in parallel tool execution: {str(e)}"))
+            # Don't use exc_info=True with structlog - causes concatenation errors
+            logger.error(f"❌ Full traceback: {traceback.format_exc()}")
+            self.trace.event(name="error_in_parallel_tool_execution", level="ERROR", status_message=(f"Error in parallel tool execution: {error_str}"))
 
             # Return error results for all tools if the gather itself fails
             error_results = []
             for tool_call in tool_calls:
                 tool_name = tool_call.get('function_name', 'unknown')
                 try:
-                    error_result = ToolResult(success=False, output=f"Execution error: {str(e)}")
+                    error_result = ToolResult(success=False, output=f"Execution error: {error_str}")
                     error_results.append((tool_call, error_result))
                 except Exception as result_error:
                     logger.error(f"❌ Failed to create error result for {tool_name}: {result_error}")

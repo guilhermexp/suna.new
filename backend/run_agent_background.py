@@ -13,14 +13,35 @@ from core.utils.logger import logger, structlog
 import dramatiq
 import uuid
 from core.agentpress.thread_manager import ThreadManager
+from core.agentpress.error_processor import ErrorProcessor
 from core.services.supabase import DBConnection
 from core.services import redis
 from dramatiq.brokers.redis import RedisBroker
 import os
-from core.services.langfuse import langfuse
 from core.utils.retry import retry
 
-import sentry_sdk
+class _NoopTrace:
+    class _Span:
+        def __enter__(self):
+            return self
+        def __exit__(self, exc_type, exc, tb):
+            pass
+        def end(self, **kwargs):
+            pass
+        def update(self, **kwargs):
+            pass
+    def span(self, *args, **kwargs):
+        return self._Span()
+    def start_span(self, *args, **kwargs):
+        return self._Span()
+    def generation(self, *args, **kwargs):
+        return self._Span()
+    def update(self, **kwargs):
+        pass
+    def event(self, *args, **kwargs):
+        pass
+
+trace = _NoopTrace()
 from typing import Dict, Any
 
 redis_host = os.getenv('REDIS_HOST', 'redis')
@@ -150,10 +171,9 @@ async def run_agent_background(
         except asyncio.CancelledError:
             logger.debug(f"Stop signal checker cancelled for {agent_run_id} (Instance: {instance_id})")
         except Exception as e:
-            logger.error(f"Error in stop signal checker for {agent_run_id}: {e}", exc_info=True)
+            error_str = ErrorProcessor.safe_error_to_string(e)
+            logger.error(f"Error in stop signal checker for {agent_run_id}: {error_str}")
             stop_signal_received = True # Stop the run if the checker fails
-
-    trace = langfuse.trace(name="agent_run", id=agent_run_id, session_id=thread_id, metadata={"project_id": project_id, "instance_id": instance_id})
 
     try:
         # Setup Pub/Sub listener for control signals
@@ -161,7 +181,8 @@ async def run_agent_background(
         try:
             await retry(lambda: pubsub.subscribe(instance_control_channel, global_control_channel))
         except Exception as e:
-            logger.error(f"Redis failed to subscribe to control channels: {e}", exc_info=True)
+            error_str = ErrorProcessor.safe_error_to_string(e)
+            logger.error(f"Redis failed to subscribe to control channels: {error_str}")
             raise e
 
         logger.info(f"Subscribed to control channels: {instance_control_channel}, {global_control_channel}")
@@ -236,7 +257,7 @@ async def run_agent_background(
             logger.warning(f"Failed to publish final control signal {control_signal}: {str(e)}")
 
     except Exception as e:
-        error_message = str(e)
+        error_message = ErrorProcessor.safe_error_to_string(e)
         traceback_str = traceback.format_exc()
         duration = (datetime.now(timezone.utc) - start_time).total_seconds()
         logger.error(f"Error in agent run {agent_run_id} after {duration:.2f}s: {error_message}\n{traceback_str} (Instance: {instance_id})")
@@ -374,10 +395,11 @@ async def update_agent_run_status(
                 if retry < 2:  # Not the last retry yet
                     await asyncio.sleep(0.5 * (2 ** retry))  # Exponential backoff
                 else:
-                    logger.error(f"Failed to update agent run status after all retries: {agent_run_id}", exc_info=True)
+                    logger.error(f"Failed to update agent run status after all retries: {agent_run_id}")
                     return False
     except Exception as e:
-        logger.error(f"Unexpected error updating agent run status for {agent_run_id}: {str(e)}", exc_info=True)
+        error_str = ErrorProcessor.safe_error_to_string(e)
+        logger.error(f"Unexpected error updating agent run status for {agent_run_id}: {error_str}")
         return False
 
     return False

@@ -1,11 +1,16 @@
 import { createQueryHook } from "@/hooks/use-query";
 import { threadKeys } from "./keys";
-import { checkBillingStatus } from "@/lib/api";
+// Billing removido: usar status permissivo local sem chamadas ao backend
 
 export const useBillingStatusQuery = (enabled = true) =>
   createQueryHook(
     threadKeys.billingStatus,
-    () => checkBillingStatus(),
+    () => Promise.resolve({
+      can_run: true,
+      reason: 'billing disabled',
+      tier: null,
+      credits: { balance: Infinity, lifetime_used: 0, can_purchase: false },
+    }),
     {
       enabled,
       retry: 1,

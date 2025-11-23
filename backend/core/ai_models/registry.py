@@ -44,7 +44,6 @@ class ModelRegistry:
                     input_cost_per_million_tokens=3.00,
                     output_cost_per_million_tokens=15.00,
                 ),
-                tier_availability=["paid"],
                 priority=101,
                 recommended=False,
                 enabled=True,
@@ -80,7 +79,6 @@ class ModelRegistry:
                     input_cost_per_million_tokens=0.90,  # 302.AI discounted pricing
                     output_cost_per_million_tokens=4.50,
                 ),
-                tier_availability=["paid"],
                 priority=102,  # Higher priority due to better pricing
                 recommended=True,  # Recommend due to cost savings
                 enabled=True,
@@ -119,7 +117,6 @@ class ModelRegistry:
                     input_cost_per_million_tokens=3.00,
                     output_cost_per_million_tokens=15.00,
                 ),
-                tier_availability=["paid"],
                 priority=100,
                 recommended=False,
                 enabled=True,
@@ -152,7 +149,6 @@ class ModelRegistry:
                     input_cost_per_million_tokens=3.00,
                     output_cost_per_million_tokens=15.00,
                 ),
-                tier_availability=["paid"],
                 priority=99,
                 enabled=True,
                 config=ModelConfig(
@@ -177,7 +173,6 @@ class ModelRegistry:
                     input_cost_per_million_tokens=0.20,
                     output_cost_per_million_tokens=0.50,
                 ),
-                tier_availability=["paid"],
                 priority=98,
                 enabled=True,
             )
@@ -200,7 +195,6 @@ class ModelRegistry:
                     input_cost_per_million_tokens=0.20,
                     output_cost_per_million_tokens=1.50,
                 ),
-                tier_availability=["paid"],
                 priority=97,
                 enabled=True,
                 config=ModelConfig(
@@ -251,7 +245,6 @@ class ModelRegistry:
                     input_cost_per_million_tokens=1.25,
                     output_cost_per_million_tokens=10.00,
                 ),
-                tier_availability=["paid"],
                 priority=97,
                 enabled=True,
             )
@@ -273,7 +266,6 @@ class ModelRegistry:
                     input_cost_per_million_tokens=0.25,
                     output_cost_per_million_tokens=2.00,
                 ),
-                tier_availability=["free", "paid"],
                 priority=96,
                 enabled=True,
             )
@@ -294,7 +286,6 @@ class ModelRegistry:
                     input_cost_per_million_tokens=0.10,
                     output_cost_per_million_tokens=1.00,
                 ),
-                tier_availability=["free", "paid"],
                 priority=95,
                 enabled=True,
             )
@@ -317,7 +308,6 @@ class ModelRegistry:
                     input_cost_per_million_tokens=1.25,
                     output_cost_per_million_tokens=10.00,
                 ),
-                tier_availability=["paid"],
                 priority=102,
                 recommended=True,
                 enabled=True,
@@ -345,7 +335,6 @@ class ModelRegistry:
                     input_cost_per_million_tokens=0.30,
                     output_cost_per_million_tokens=1.20,
                 ),
-                tier_availability=["free", "paid"],
                 priority=94,
                 enabled=True,
             )
@@ -368,7 +357,6 @@ class ModelRegistry:
                     input_cost_per_million_tokens=0.50,
                     output_cost_per_million_tokens=2.00,
                 ),
-                tier_availability=["paid"],
                 priority=93,
                 enabled=True,
                 config=ModelConfig(api_base="https://api.z.ai/api/coding/paas/v4"),
@@ -395,12 +383,10 @@ class ModelRegistry:
                     input_cost_per_million_tokens=0.50,
                     output_cost_per_million_tokens=2.00,
                 ),
-                tier_availability=["paid"],
                 priority=92,  # Slightly lower priority than OpenAI version
                 enabled=True,
                 config=ModelConfig(
-                    api_base="https://api.z.ai/api/anthropic",  # Z.AI Anthropic-compatible endpoint
-                    # No model_name_override - let LiteLLM use anthropic/GLM-4.6
+                    api_base="https://api.z.ai/api/anthropic",
                 ),
             )
         )
@@ -491,10 +477,6 @@ class ModelRegistry:
             models = [m for m in models if m.enabled]
         return models
 
-    def get_by_tier(self, tier: str, enabled_only: bool = True) -> List[Model]:
-        models = self.get_all(enabled_only)
-        return [m for m in models if tier in m.tier_availability]
-
     def get_by_provider(
         self, provider: ModelProvider, enabled_only: bool = True
     ) -> List[Model]:
@@ -551,7 +533,6 @@ class ModelRegistry:
                 if model.pricing
                 else None,
                 "context_window": model.context_window,
-                "tier_availability": model.tier_availability,
             }
 
             if model.pricing:
@@ -562,24 +543,16 @@ class ModelRegistry:
 
             context_windows_dict[model.id] = model.context_window
 
-        free_models = [m.id for m in self.get_by_tier("free")]
-        paid_models = [m.id for m in self.get_by_tier("paid")]
-
         # Debug logging
         from core.utils.logger import logger
 
-        logger.debug(
-            f"Legacy format generation: {len(free_models)} free models, {len(paid_models)} paid models"
-        )
-        logger.debug(f"Free models: {free_models}")
-        logger.debug(f"Paid models: {paid_models}")
+        all_models = [m.id for m in self.get_all(enabled_only=True)]
+        logger.debug(f"Legacy format generation: {len(all_models)} models available")
 
         return {
             "MODELS": models_dict,
             "HARDCODED_MODEL_PRICES": pricing_dict,
             "MODEL_CONTEXT_WINDOWS": context_windows_dict,
-            "FREE_TIER_MODELS": free_models,
-            "PAID_TIER_MODELS": paid_models,
         }
 
 

@@ -33,9 +33,9 @@ export function useBilling(
 
       if (result && !result.can_run) {
         setBillingData({
-          currentUsage: result.subscription?.minutes_limit || 0,
-          limit: result.subscription?.minutes_limit || 0,
-          message: result.message || 'Usage limit reached',
+          currentUsage: 0,
+          limit: 0,
+          message: result.reason || 'Usage limit reached',
           accountId: projectAccountId || null,
         });
         setShowBillingAlert(true);

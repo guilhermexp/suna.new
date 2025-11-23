@@ -29,16 +29,13 @@ import httpx
 
 from core.utils.logger import logger
 
-from core.billing.billing_integration import billing_integration
+# Billing removed - credit checks removed from execution flow
 from core.tools.sb_vision_tool import SandboxVisionTool
 from core.tools.sb_image_edit_tool import SandboxImageEditTool
 from core.tools.sb_designer_tool import SandboxDesignerTool
 from core.tools.sb_presentation_outline_tool import SandboxPresentationOutlineTool
 from core.tools.sb_presentation_tool import SandboxPresentationTool
 from core.tools.sb_document_parser import SandboxDocumentParserTool
-
-from core.services.langfuse import langfuse
-from langfuse.client import StatefulTraceClient
 
 from core.tools.mcp_tool_wrapper import MCPToolWrapper
 from core.tools.task_list_tool import TaskListTool
@@ -65,7 +62,7 @@ class AgentConfig:
     max_iterations: int = 100
     model_name: str = "openai/gpt-5-mini"
     agent_config: Optional[dict] = None
-    trace: Optional[StatefulTraceClient] = None
+    trace: Optional[Any] = None
 
 class ToolManager:
     def __init__(self, thread_manager: ThreadManager, project_id: str, thread_id: str, agent_config: Optional[dict] = None):
@@ -402,7 +399,12 @@ class PromptManager:
         
         # Start with agent's normal system prompt or default
         if agent_config and agent_config.get('system_prompt'):
-            system_content = agent_config['system_prompt'].strip()
+            prompt = agent_config['system_prompt']
+            # Ensure system_prompt is a string (could be a list in some cases)
+            if isinstance(prompt, list):
+                system_content = '\n'.join(str(p) for p in prompt)
+            else:
+                system_content = str(prompt).strip()
         else:
             system_content = default_system_content
         
@@ -572,7 +574,7 @@ When using the tools:
 
 
 class MessageManager:
-    def __init__(self, client, thread_id: str, model_name: str, trace: Optional[StatefulTraceClient], 
+    def __init__(self, client, thread_id: str, model_name: str, trace: Optional[Any], 
                  agent_config: Optional[dict] = None):
         self.client = client
         self.thread_id = thread_id
@@ -622,9 +624,6 @@ class AgentRunner:
         self._image_description_cache: Dict[str, Optional[str]] = {}
 
     async def setup(self):
-        if not self.config.trace:
-            self.config.trace = langfuse.trace(name="run_agent", session_id=self.config.thread_id, metadata={"project_id": self.config.project_id})
-        
         self.thread_manager = ThreadManager(
             trace=self.config.trace, 
             agent_config=self.config.agent_config
@@ -963,15 +962,7 @@ class AgentRunner:
         while continue_execution and iteration_count < self.config.max_iterations:
             iteration_count += 1
 
-            can_run, message, reservation_id = await billing_integration.check_and_reserve_credits(self.account_id)
-            if not can_run:
-                error_msg = f"Insufficient credits: {message}"
-                yield {
-                    "type": "status",
-                    "status": "stopped",
-                    "message": error_msg
-                }
-                break
+            # Billing check removed - execution proceeds without credit verification
 
             latest_message = await self.client.table('messages').select('*').eq('thread_id', self.config.thread_id).in_('type', ['assistant', 'tool', 'user']).order('created_at', desc=True).limit(1).execute()
             if latest_message.data and len(latest_message.data) > 0:
@@ -1117,7 +1108,9 @@ class AgentRunner:
                 generation.end()
 
         try:
-            asyncio.create_task(asyncio.to_thread(lambda: langfuse.flush()))
+            # Only flush if langfuse is available
+            if 'langfuse' in globals() and langfuse is not None:
+                asyncio.create_task(asyncio.to_thread(lambda: langfuse.flush()))
         except Exception as e:
             logger.warning(f"Failed to flush Langfuse: {e}")
 
@@ -1130,7 +1123,7 @@ async def run_agent(
     max_iterations: int = 100,
     model_name: str = "openai/gpt-5-mini",
     agent_config: Optional[dict] = None,    
-    trace: Optional[StatefulTraceClient] = None
+    trace: Optional[Any] = None
 ):
     effective_model = model_name
 

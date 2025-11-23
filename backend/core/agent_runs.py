@@ -10,8 +10,7 @@ from fastapi.responses import StreamingResponse
 
 from core.utils.auth_utils import verify_and_get_user_id_from_jwt, get_user_id_from_stream_auth, verify_and_authorize_thread_access
 from core.utils.logger import logger, structlog
-# Billing checks now handled by billing_integration.check_model_and_billing_access
-from core.billing.billing_integration import billing_integration
+# Billing removed - model validation now done through model_manager
 from core.utils.config import config, EnvMode
 from core.services import redis
 from core.sandbox.sandbox import create_sandbox, delete_sandbox
@@ -136,22 +135,14 @@ async def start_agent(
     if agent_config:
         logger.debug(f"Using agent {agent_config['agent_id']} for this agent run (thread remains agent-agnostic)")
 
-    # Unified billing and model access check
-    can_proceed, error_message, context = await billing_integration.check_model_and_billing_access(
-        account_id, model_name, client
-    )
-    
-    if not can_proceed:
-        if context.get("error_type") == "model_access_denied":
-            raise HTTPException(status_code=403, detail={
-                "message": error_message, 
-                "allowed_models": context.get("allowed_models", [])
+    # Validate model if specified
+    if model_name:
+        is_valid, validation_error = model_manager.validate_model(model_name)
+        if not is_valid:
+            raise HTTPException(status_code=400, detail={
+                "message": f"Invalid model: {validation_error}"
             })
-        elif context.get("error_type") == "insufficient_credits":
-            raise HTTPException(status_code=402, detail={"message": error_message})
-        else:
-            raise HTTPException(status_code=500, detail={"message": error_message})
-    
+
     # Check agent run limits (only if not in local mode)
     if config.ENV_MODE != EnvMode.LOCAL:
         limit_check = await check_agent_run_limit(client, account_id)
@@ -625,22 +616,14 @@ async def initiate_agent_with_files(
     # Convert to dict for backward compatibility with rest of function
     agent_config = agent_data.to_dict() if agent_data else None
 
-    # Unified billing and model access check
-    can_proceed, error_message, context = await billing_integration.check_model_and_billing_access(
-        account_id, model_name, client
-    )
-    
-    if not can_proceed:
-        if context.get("error_type") == "model_access_denied":
-            raise HTTPException(status_code=403, detail={
-                "message": error_message, 
-                "allowed_models": context.get("allowed_models", [])
+    # Validate model if specified
+    if model_name:
+        is_valid, validation_error = model_manager.validate_model(model_name)
+        if not is_valid:
+            raise HTTPException(status_code=400, detail={
+                "message": f"Invalid model: {validation_error}"
             })
-        elif context.get("error_type") == "insufficient_credits":
-            raise HTTPException(status_code=402, detail={"message": error_message})
-        else:
-            raise HTTPException(status_code=500, detail={"message": error_message})
-    
+
     # Check additional limits (only if not in local mode)
     if config.ENV_MODE != EnvMode.LOCAL:
         # Check agent run limit and project limit concurrently

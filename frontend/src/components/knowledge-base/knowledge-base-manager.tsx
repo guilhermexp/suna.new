@@ -218,7 +218,7 @@ export function KnowledgeBaseManager({
             }
 
             console.log('📡 Fetching assignments from API...');
-            const response = await fetch(`${API_URL}/knowledge-base/agents/${agentId}/assignments`, {
+            const response = await fetch(`${API_URL}/api/knowledge-base/agents/${agentId}/assignments`, {
                 headers: {
                     'Authorization': `Bearer ${session.access_token}`,
                     'Content-Type': 'application/json'
@@ -374,7 +374,7 @@ export function KnowledgeBaseManager({
             
             if (!session?.access_token) return;
 
-            const response = await fetch(`${API_URL}/knowledge-base/agents/${agentId}/assignments`, {
+            const response = await fetch(`${API_URL}/api/knowledge-base/agents/${agentId}/assignments`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${session.access_token}`,

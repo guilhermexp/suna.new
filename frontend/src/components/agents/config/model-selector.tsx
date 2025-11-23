@@ -21,8 +21,7 @@ import { useModelSelection } from '@/hooks/use-model-selection';
 import { formatModelName, CustomModel } from '@/lib/stores/model-store';
 import { isLocalMode } from '@/lib/config';
 import { CustomModelDialog, CustomModelFormData } from '@/components/thread/chat-input/custom-model-dialog';
-import { PaywallDialog } from '@/components/payment/paywall-dialog';
-import { BillingModal } from '@/components/billing/billing-modal';
+ 
 import Link from 'next/link';
 
 interface AgentModelSelectorProps {
@@ -59,7 +58,6 @@ export function AgentModelSelector({
   
   const [paywallOpen, setPaywallOpen] = useState(false);
   const [lockedModel, setLockedModel] = useState<string | null>(null);
-  const [billingModalOpen, setBillingModalOpen] = useState(false);
   
   const [isCustomModelDialogOpen, setIsCustomModelDialogOpen] = useState(false);
   const [dialogInitialData, setDialogInitialData] = useState<CustomModelFormData>({ id: '', label: '' });
@@ -144,10 +142,7 @@ export function AgentModelSelector({
     });
   }, [filteredOptions]);
 
-  const freeModels = sortedModels.filter(m => !m.requiresSubscription);
-  const premiumModels = sortedModels.filter(m => m.requiresSubscription);
-
-  const shouldDisplayAll = !isLocalMode() && premiumModels.length > 0;
+  const freeModels = sortedModels;
 
   useEffect(() => {
     if (isOpen && searchInputRef.current) {
@@ -174,14 +169,12 @@ export function AgentModelSelector({
       onChange(modelId);
       setIsOpen(false);
     } else {
-      setLockedModel(modelId);
-      setPaywallOpen(true);
+      setLockedModel(null);
+      setPaywallOpen(false);
     }
   };
 
-  const handleUpgradeClick = () => {
-    setBillingModalOpen(true);
-  };
+  const handleUpgradeClick = () => {};
 
   const closePaywallDialog = () => {
     setPaywallOpen(false);
@@ -342,11 +335,7 @@ export function AgentModelSelector({
               </DropdownMenuItem>
             </div>
           </TooltipTrigger>
-          {!accessible && !isLocalMode() ? (
-            <TooltipContent side="left" className="text-xs max-w-xs">
-              <p>Requires subscription to access premium model</p>
-            </TooltipContent>
-          ) : isLowQuality ? (
+          {isLowQuality ? (
             <TooltipContent side="left" className="text-xs max-w-xs">
               <p>Not recommended for complex tasks</p>
             </TooltipContent>
@@ -473,104 +462,18 @@ export function AgentModelSelector({
                 </div>
               </div>
               
-              {shouldDisplayAll ? (
-                <div>
-                  <div className="px-3 py-2 text-xs font-medium text-muted-foreground">
-                    Available Models
+              <div>
+                <div className="px-3 py-2 text-xs font-medium text-muted-foreground">
+                  Available Models
+                </div>
+                {sortedModels.length > 0 ? (
+                  sortedModels.map((model, index) => renderModelOption(model, index))
+                ) : (
+                  <div className="text-sm text-center py-4 text-muted-foreground">
+                    No models match your search
                   </div>
-                  {freeModels.map((model, index) => renderModelOption(model, index))}
-                  
-                  {premiumModels.length > 0 && (
-                    <>
-                      <div className="mt-4 border-t border-border pt-2">
-                        <div className="px-3 py-1.5 text-xs font-medium text-blue-500 flex items-center">
-                          <Crown className="h-3.5 w-3.5 mr-1.5" />
-                          {subscriptionStatus === 'active' ? 'Premium Models' : 'Additional Models'}
-                        </div>
-                        <div className="relative overflow-hidden" style={{ maxHeight: subscriptionStatus === 'active' ? 'none' : '160px' }}>
-                          {(subscriptionStatus === 'active' ? premiumModels : premiumModels.slice(0, 3)).map((model, index) => {
-                            const canAccess = isLocalMode() || canAccessModel(model.id);
-                            const isRecommended = model.recommended;
-                            
-                            return (
-                              <Tooltip key={`premium-${model.id}-${index}`}>
-                                <TooltipTrigger asChild>
-                                    <div className='w-full'>
-                                      <DropdownMenuItem
-                                        className={cn(
-                                          "text-sm px-3 rounded-lg py-2 mx-2 my-0.5 flex items-center justify-between cursor-pointer",
-                                          !canAccess && "opacity-70"
-                                        )}
-                                        onClick={() => handleSelect(model.id)}
-                                      >
-                                        <div className="flex items-center gap-3">
-                                          <ModelProviderIcon modelId={model.id} size={24} />
-                                          <span className="font-medium">{model.label}</span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                          {isRecommended && (
-                                            <span className="text-xs px-1.5 py-0.5 rounded-sm bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 font-medium whitespace-nowrap">
-                                              Recommended
-                                            </span>
-                                          )}
-                                          {!canAccess && <Crown className="h-3.5 w-3.5 text-blue-500" />}
-                                          {selectedModel === model.id && (
-                                            <Check className="h-4 w-4 text-blue-500" />
-                                          )}
-                                        </div>
-                                      </DropdownMenuItem>
-                                    </div>
-                                  </TooltipTrigger>
-                                  <TooltipContent side="left" className="text-xs max-w-xs">
-                                    <p>
-                                      {canAccess 
-                                        ? (isRecommended ? 'Recommended for optimal performance' : 'Premium model') 
-                                        : 'Requires subscription to access premium model'
-                                      }
-                                    </p>
-                                  </TooltipContent>
-                                </Tooltip>
-                            );
-                          })}
-                          {subscriptionStatus !== 'active' && (
-                            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/95 to-transparent flex items-end justify-center">
-                              <div className="w-full p-3">
-                                <div className="rounded-xl bg-gradient-to-br from-blue-50/80 to-blue-200/70 dark:from-blue-950/40 dark:to-blue-900/30 shadow-sm border border-blue-200/50 dark:border-blue-800/50 p-3">
-                                  <div className="flex flex-col space-y-2">
-                                    <div className="flex items-center">
-                                      <Crown className="h-4 w-4 text-blue-500 mr-2 flex-shrink-0" />
-                                      <div>
-                                        <p className="text-sm font-medium">Unlock all models + higher limits</p>
-                                      </div>
-                                    </div>
-                                    <Button
-                                      size="sm"
-                                      className="w-full h-8 font-medium"
-                                      onClick={handleUpgradeClick}
-                                    >
-                                      Upgrade now
-                                    </Button>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-              ) : (
-                <div>
-                  {sortedModels.length > 0 ? (
-                    sortedModels.map((model, index) => renderModelOption(model, index))
-                  ) : (
-                    <div className="text-sm text-center py-4 text-muted-foreground">
-                      No models match your search
-                    </div>
-                  )}
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
         </DropdownMenuContent>
@@ -584,26 +487,8 @@ export function AgentModelSelector({
           mode={dialogMode}
         />
       )}
-      {paywallOpen && (
-        <PaywallDialog
-          open={true}
-          onDialogClose={closePaywallDialog}
-          title="Premium Model"
-          description={
-            lockedModel
-              ? `Subscribe to access ${enhancedModelOptions.find(
-                  (m) => m.id === lockedModel
-                )?.label}`
-              : 'Subscribe to access premium models with enhanced capabilities'
-          }
-          ctaText="Subscribe Now"
-          cancelText="Maybe Later"
-        />
-      )}
-      <BillingModal
-        open={billingModalOpen}
-        onOpenChange={setBillingModalOpen}
-      />
+      
+      
     </div>
   );
 }

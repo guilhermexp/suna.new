@@ -50,19 +50,16 @@ dependencies = [
   "vncdotool==1.2.0",
   "tavily-python==0.5.4",
   "pytesseract==0.3.13",
-  "stripe==11.6.0",
   "dramatiq==1.18.0",
   "dramatiq[redis]==1.18.0",
   "phonenumbers==8.13.50",
   "prometheus-client==0.21.1",
-  "langfuse==2.60.5",
   "Pillow>=10.4.0",
   "mcp==1.9.4",
   "httpx==0.28.0",
   "aiohttp==3.12.0",
   "email-validator==2.0.0",
-  "mailtrap==2.0.1",
-  "sentry-sdk[fastapi]==2.29.1",
+  
   "gunicorn>=23.0.0",
   "cryptography>=41.0.0",
   "apscheduler>=3.10.0",
@@ -88,6 +85,7 @@ dependencies = [
   "chunkr-ai>=0.3.7",
   "reportlab>=4.0.0",
   "bleach>=6.0.0",
+  "backoff>=2.2.1",
 ]
 
 [project.urls]

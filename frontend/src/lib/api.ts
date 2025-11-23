@@ -1841,208 +1841,33 @@ export interface ReactivateSubscriptionResponse {
 export const createCheckoutSession = async (
   request: CreateCheckoutSessionRequest,
 ): Promise<CreateCheckoutSessionResponse> => {
-  try {
-    const supabase = createClient();
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (!session?.access_token) {
-      throw new NoAccessTokenAvailableError();
-    }
-    
-    
-    const requestBody = { ...request, tolt_referral: window.tolt_referral };
-    
-    // Use the new billing v2 API endpoint
-    const response = await fetch(`${API_URL}/api/billing/create-checkout-session`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify(requestBody),
-    });
-
-    if (!response.ok) {
-      const errorText = await response
-        .text()
-        .catch(() => 'No error details available');
-      console.error(
-        `Error creating checkout session: ${response.status} ${response.statusText}`,
-        errorText,
-      );
-      throw new Error(
-        `Error creating checkout session: ${response.statusText} (${response.status})`,
-      );
-    }
-
-    const data = await response.json();
-    if (data.checkout_url) {
-      return {
-        status: 'checkout_created',
-        url: data.checkout_url
-      };
-    } else if (data.success && data.subscription_id) {
-      return {
-        status: 'updated',
-        message: data.message || 'Subscription updated successfully',
-        subscription_id: data.subscription_id
-      };
-    } else {
-      return data;
-    }
-  } catch (error) {
-    console.error('Failed to create checkout session:', error);
-    handleApiError(error, { operation: 'create checkout session', resource: 'billing' });
-    throw error;
-  }
+  return {
+    status: 'no_change',
+    message: 'billing disabled',
+  } as CreateCheckoutSessionResponse;
 };
 
 
 export const createPortalSession = async (
   request: CreatePortalSessionRequest,
 ): Promise<{ url: string }> => {
-  try {
-    const supabase = createClient();
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (!session?.access_token) {
-      throw new NoAccessTokenAvailableError();
-    }
-
-    const response = await fetch(`${API_URL}/api/billing/create-portal-session`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify(request),
-    });
-
-    if (!response.ok) {
-      const errorText = await response
-        .text()
-        .catch(() => 'No error details available');
-      console.error(
-        `Error creating portal session: ${response.status} ${response.statusText}`,
-        errorText,
-      );
-      throw new Error(
-        `Error creating portal session: ${response.statusText} (${response.status})`,
-      );
-    }
-
-    const data = await response.json();
-    
-    return {
-      url: data.portal_url
-    };
-  } catch (error) {
-    console.error('Failed to create portal session:', error);
-    handleApiError(error, { operation: 'create portal session', resource: 'billing portal' });
-    throw error;
-  }
+  return { url: '' };
 };
 
 
 export const getSubscription = async (): Promise<SubscriptionStatus> => {
-  try {
-    const supabase = createClient();
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (!session?.access_token) {
-      throw new NoAccessTokenAvailableError();
-    }
-
-    const response = await fetch(`${API_URL}/api/billing/subscription`, {
-      headers: {
-        Authorization: `Bearer ${session.access_token}`,
-      },
-    });
-
-    if (!response.ok) {
-      const errorText = await response
-        .text()
-        .catch(() => 'No error details available');
-      console.error(
-        `Error getting subscription: ${response.status} ${response.statusText}`,
-        errorText,
-      );
-      throw new Error(
-        `Error getting subscription: ${response.statusText} (${response.status})`,
-      );
-    }
-
-    const data = await response.json();
-
-    return {
-      subscription: data.subscription ? {
-        ...data.subscription,
-        cancel_at_period_end: data.subscription.cancel_at ? true : false,
-      } : null,
-      current_usage: data.credits?.lifetime_used || 0,
-      cost_limit: data.tier?.credits || 0,
-      credit_balance: data.credits?.balance || 0,
-      can_purchase_credits: data.credits?.can_purchase || false,
-      ...data 
-    } as SubscriptionStatus;
-  } catch (error) {
-    if (error instanceof NoAccessTokenAvailableError) {
-      throw error;
-    }
-
-    console.error('Failed to get subscription:', error);
-    handleApiError(error, { operation: 'load subscription', resource: 'billing information' });
-    throw error;
-  }
+  return {
+    subscription: null,
+    current_usage: 0,
+    cost_limit: 0,
+    credit_balance: Number.POSITIVE_INFINITY,
+    can_purchase_credits: false,
+    status: 'no_subscription',
+  } as SubscriptionStatus;
 };
 
 export const getSubscriptionCommitment = async (subscriptionId: string): Promise<CommitmentInfo> => {
-  try {
-    const supabase = createClient();
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (!session?.access_token) {
-      throw new NoAccessTokenAvailableError();
-    }
-
-    // Use the new billing v2 API endpoint
-    const response = await fetch(`${API_URL}/api/billing/subscription-commitment/${subscriptionId}`, {
-      headers: {
-        Authorization: `Bearer ${session.access_token}`,
-      },
-    });
-
-    if (!response.ok) {
-      const errorText = await response
-        .text()
-        .catch(() => 'No error details available');
-      console.error(
-        `Error getting subscription commitment: ${response.status} ${response.statusText}`,
-        errorText,
-      );
-      throw new Error(
-        `Error getting subscription commitment: ${response.statusText} (${response.status})`,
-      );
-    }
-
-    return response.json();
-  } catch (error) {
-    if (error instanceof NoAccessTokenAvailableError) {
-      throw error;
-    }
-
-    console.error('Failed to get subscription commitment:', error);
-    handleApiError(error, { operation: 'load subscription commitment', resource: 'commitment information' });
-    throw error;
-  }
+  return { status: 'none' } as unknown as CommitmentInfo;
 };
 
 export const getAvailableModels = async (): Promise<AvailableModelsResponse> => {
@@ -2056,7 +1881,7 @@ export const getAvailableModels = async (): Promise<AvailableModelsResponse> => 
       throw new NoAccessTokenAvailableError();
     }
 
-    const response = await fetch(`${API_URL}/api/billing/available-models`, {
+    const response = await fetch(`${API_URL}/api/models/available`, {
       headers: {
         Authorization: `Bearer ${session.access_token}`,
       },
@@ -2070,9 +1895,19 @@ export const getAvailableModels = async (): Promise<AvailableModelsResponse> => 
         `Error getting available models: ${response.status} ${response.statusText}`,
         errorText,
       );
-      throw new Error(
-        `Error getting available models: ${response.statusText} (${response.status})`,
-      );
+      return {
+        models: [
+          {
+            id: 'default-model',
+            display_name: 'Default Model',
+            requires_subscription: false,
+            priority: 0,
+            recommended: true,
+            capabilities: [],
+            context_window: 128000,
+          },
+        ],
+      } as AvailableModelsResponse;
     }
 
     return response.json();
@@ -2082,132 +1917,39 @@ export const getAvailableModels = async (): Promise<AvailableModelsResponse> => 
     }
 
     console.error('Failed to get available models:', error);
-    handleApiError(error, { operation: 'load available models', resource: 'AI models' });
-    throw error;
+    return {
+      models: [
+        {
+          id: 'default-model',
+          display_name: 'Default Model',
+          requires_subscription: false,
+          priority: 0,
+          recommended: true,
+          capabilities: [],
+          context_window: 128000,
+        },
+      ],
+    } as AvailableModelsResponse;
   }
 };
 
 export const checkBillingStatus = async (): Promise<BillingStatusResponse> => {
-  try {
-    const supabase = createClient();
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (!session?.access_token) {
-      throw new NoAccessTokenAvailableError();
+  return {
+    can_run: true,
+    message: 'billing disabled',
+    subscription: {
+      price_id: '',
+      plan_name: 'free'
     }
-
-    const response = await fetch(`${API_URL}/api/billing/check-status`, {
-      headers: {
-        Authorization: `Bearer ${session.access_token}`,
-      },
-    });
-
-    if (!response.ok) {
-      const errorText = await response
-        .text()
-        .catch(() => 'No error details available');
-      console.error(
-        `Error checking billing status: ${response.status} ${response.statusText}`,
-        errorText,
-      );
-      throw new Error(
-        `Error checking billing status: ${response.statusText} (${response.status})`,
-      );
-    }
-
-    return response.json();
-  } catch (error) {
-    if (error instanceof NoAccessTokenAvailableError) {
-      throw error;
-    }
-
-    console.error('Failed to check billing status:', error);
-    throw error;
-  }
+  };
 };
 
 export const cancelSubscription = async (): Promise<CancelSubscriptionResponse> => {
-  try {
-    const supabase = createClient();
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (!session?.access_token) {
-      throw new NoAccessTokenAvailableError();
-    }
-
-    const response = await fetch(`${API_URL}/api/billing/cancel-subscription`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({}),
-    });
-
-    if (!response.ok) {
-      const errorText = await response
-        .text()
-        .catch(() => 'No error details available');
-      console.error(
-        `Error cancelling subscription: ${response.status} ${response.statusText}`,
-        errorText,
-      );
-      throw new Error(
-        `Error cancelling subscription: ${response.statusText} (${response.status})`,
-      );
-    }
-
-    return response.json();
-  } catch (error) {
-    console.error('Failed to cancel subscription:', error);
-    handleApiError(error, { operation: 'cancel subscription', resource: 'subscription' });
-    throw error;
-  }
+  return { success: false, status: 'commitment_prevents_cancellation', message: 'billing disabled' };
 };
 
 export const reactivateSubscription = async (): Promise<ReactivateSubscriptionResponse> => {
-  try {
-    const supabase = createClient();
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (!session?.access_token) {
-      throw new NoAccessTokenAvailableError();
-    }
-
-    const response = await fetch(`${API_URL}/api/billing/reactivate-subscription`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({}),
-    });
-
-    if (!response.ok) {
-      const errorText = await response
-        .text()
-        .catch(() => 'No error details available');
-      console.error(
-        `Error reactivating subscription: ${response.status} ${response.statusText}`,
-        errorText,
-      );
-      throw new Error(
-        `Error reactivating subscription: ${response.statusText} (${response.status})`,
-      );
-    }
-
-    return response.json();
-  } catch (error) {
-    console.error('Failed to reactivate subscription:', error);
-    handleApiError(error, { operation: 'reactivate subscription', resource: 'subscription' });
-    throw error;
-  }
+  return { success: false, status: 'not_cancelled', message: 'billing disabled' };
 };
 
 // Transcription API Types

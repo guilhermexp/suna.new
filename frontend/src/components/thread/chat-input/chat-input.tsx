@@ -36,7 +36,6 @@ import { IntegrationsRegistry } from '@/components/agents/integrations-registry'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useSubscriptionData } from '@/contexts/SubscriptionContext';
 import { isLocalMode } from '@/lib/config';
-import { BillingModal } from '@/components/billing/billing-modal';
 import { AgentConfigurationDialog } from '@/components/agents/agent-configuration-dialog';
 import { safeJsonParse } from '@/components/thread/utils';
 import posthog from 'posthog-js';
@@ -151,7 +150,6 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
     const [registryDialogOpen, setRegistryDialogOpen] = useState(false);
     const [showSnackbar, setShowSnackbar] = useState(defaultShowSnackbar);
     const [userDismissedUsage, setUserDismissedUsage] = useState(false);
-    const [billingModalOpen, setBillingModalOpen] = useState(false);
     const [agentConfigDialog, setAgentConfigDialog] = useState<{ open: boolean; tab: 'instructions' | 'knowledge' | 'triggers' | 'tools' | 'integrations' }>({ open: false, tab: 'instructions' });
     const [mounted, setMounted] = useState(false);
 
@@ -556,11 +554,6 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
 
         <div className='flex items-center gap-2'>
           {renderConfigDropdown}
-          <BillingModal
-            open={billingModalOpen}
-            onOpenChange={setBillingModalOpen}
-            returnUrl={typeof window !== 'undefined' ? window.location.href : '/'}
-          />
 
           {isLoggedIn && <VoiceRecorder
             onTranscription={handleTranscription}
@@ -596,7 +589,7 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
           </Button>
         </div>
       </div>
-    ), [hideAttachments, loading, disabled, isAgentRunning, isUploading, sandboxId, messages, isLoggedIn, renderConfigDropdown, billingModalOpen, setBillingModalOpen, handleTranscription, onStopAgent, handleSubmit, value, uploadedFiles, totalTokens, latestPromptTokens, selectedModelInfo?.contextWindow]);
+    ), [hideAttachments, loading, disabled, isAgentRunning, isUploading, sandboxId, messages, isLoggedIn, renderConfigDropdown, handleTranscription, onStopAgent, handleSubmit, value, uploadedFiles, totalTokens, latestPromptTokens, selectedModelInfo?.contextWindow]);
 
 
 
@@ -612,7 +605,6 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
             showUsagePreview={showSnackbar}
             subscriptionData={subscriptionData}
             onCloseUsage={() => { setShowSnackbar(false); setUserDismissedUsage(true); }}
-            onOpenUpgrade={() => setBillingModalOpen(true)}
             isVisible={showToolPreview || !!showSnackbar}
           />
 
@@ -754,10 +746,6 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
               />
             </DialogContent>
           </Dialog>
-          <BillingModal
-            open={billingModalOpen}
-            onOpenChange={setBillingModalOpen}
-          />
           {selectedAgentId && agentConfigDialog.open && (
             <AgentConfigurationDialog
               open={agentConfigDialog.open}

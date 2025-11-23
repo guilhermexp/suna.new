@@ -7,7 +7,7 @@ import React, {
   useState,
 } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { BillingError, AgentRunLimitError, ProjectLimitError } from '@/lib/api';
+import { AgentRunLimitError } from '@/lib/api';
 import { toast } from 'sonner';
 import { ChatInput } from '@/components/thread/chat-input/chat-input';
 import { useSidebar } from '@/components/ui/sidebar';
@@ -34,7 +34,6 @@ import {
 import {
   useThreadData,
   useToolCalls,
-  useBilling,
   useKeyboardShortcuts,
 } from '@/app/(dashboard)/projects/[projectId]/thread/_hooks';
 import { ThreadError, UpgradeDialog, ThreadLayout } from '@/app/(dashboard)/projects/[projectId]/thread/_components';
@@ -140,15 +139,6 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
     handleSidePanelNavigate,
     userClosedPanelRef,
   } = useToolCalls(messages, setLeftSidebarOpen, agentStatus, compact);
-
-  const {
-    showBillingAlert,
-    setShowBillingAlert,
-    billingData,
-    setBillingData,
-    checkBillingLimits,
-    billingStatusQuery,
-  } = useBilling(null, agentStatus, initialLoadCompleted);
 
   // Real-time project updates (for sandbox creation)
   useProjectRealtime(projectId);
@@ -454,25 +444,6 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
           const error = results[1].reason;
           console.error('Failed to start agent:', error);
 
-          if (error instanceof BillingError) {
-            setBillingData({
-              currentUsage: error.detail.currentUsage as number | undefined,
-              limit: error.detail.limit as number | undefined,
-              message:
-                error.detail.message ||
-                'Monthly usage limit reached. Please upgrade.',
-              accountId: null,
-            });
-            setShowBillingAlert(true);
-
-            setMessages((prev) =>
-              prev.filter(
-                (m) => m.message_id !== optimisticUserMessage.message_id,
-              ),
-            );
-            return;
-          }
-
           if (error instanceof AgentRunLimitError) {
             const { running_thread_ids, running_count } = error.detail;
 
@@ -490,25 +461,6 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
             return;
           }
 
-          if (error instanceof ProjectLimitError) {
-            setBillingData({
-              currentUsage: error.detail.current_count as number,
-              limit: error.detail.limit as number,
-              message:
-                error.detail.message ||
-                `You've reached your project limit (${error.detail.current_count}/${error.detail.limit}). Please upgrade to create more projects.`,
-              accountId: null,
-            });
-            setShowBillingAlert(true);
-
-            setMessages((prev) =>
-              prev.filter(
-                (m) => m.message_id !== optimisticUserMessage.message_id,
-              ),
-            );
-            return;
-          }
-
           throw new Error(`Failed to start agent: ${error?.message || error}`);
         }
 
@@ -517,10 +469,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
         setAgentRunId(agentResult.agent_run_id);
       } catch (err) {
         console.error('Error sending message or starting agent:', err);
-        if (
-          !(err instanceof BillingError) &&
-          !(err instanceof AgentRunLimitError)
-        ) {
+        if (!(err instanceof AgentRunLimitError)) {
           toast.error(err instanceof Error ? err.message : 'Operation failed');
         }
         setMessages((prev) =>
@@ -536,8 +485,6 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
       addUserMessageMutation,
       startAgentMutation,
       setMessages,
-      setBillingData,
-      setShowBillingAlert,
       setAgentRunId,
     ],
   );
@@ -847,9 +794,6 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
         renderAssistantMessage={toolViewAssistant}
         renderToolResult={toolViewResult}
         isLoading={!initialLoadCompleted || isLoading}
-        showBillingAlert={showBillingAlert}
-        billingData={billingData}
-        onDismissBilling={() => setShowBillingAlert(false)}
         debugMode={debugMode}
         isMobile={isMobile}
         initialLoadCompleted={initialLoadCompleted}
@@ -891,9 +835,6 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
           renderAssistantMessage={toolViewAssistant}
           renderToolResult={toolViewResult}
           isLoading={!initialLoadCompleted || isLoading}
-          showBillingAlert={showBillingAlert}
-          billingData={billingData}
-          onDismissBilling={() => setShowBillingAlert(false)}
           debugMode={debugMode}
           isMobile={isMobile}
           initialLoadCompleted={initialLoadCompleted}
@@ -1019,9 +960,6 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
         renderAssistantMessage={toolViewAssistant}
         renderToolResult={toolViewResult}
         isLoading={!initialLoadCompleted || isLoading}
-        showBillingAlert={showBillingAlert}
-        billingData={billingData}
-        onDismissBilling={() => setShowBillingAlert(false)}
         debugMode={debugMode}
         isMobile={isMobile}
         initialLoadCompleted={initialLoadCompleted}

@@ -64,7 +64,6 @@ import { createClient } from '@/lib/supabase/client';
 import { useTheme } from 'next-themes';
 import { isLocalMode } from '@/lib/config';
 import { clearUserLocalStorage } from '@/lib/utils/clear-local-storage';
-import { BillingModal } from '@/components/billing/billing-modal';
 
 export function NavUserWithTeams({
   user,
@@ -80,8 +79,7 @@ export function NavUserWithTeams({
   const { isMobile } = useSidebar();
   const { data: accounts } = useAccounts();
   const [showNewTeamDialog, setShowNewTeamDialog] = React.useState(false);
-  const [showBillingModal, setShowBillingModal] = React.useState(false);
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme} = useTheme();
 
   // Prepare personal account and team accounts
   const personalAccount = React.useMemo(
@@ -301,35 +299,6 @@ export function NavUserWithTeams({
 
               {/* User Settings Section */}
               <DropdownMenuGroup>
-                {user.isAdmin && (
-                  <DropdownMenuSub>
-                    <DropdownMenuSubTrigger>
-                      <Shield className="h-4 w-4 mr-2" />
-                      <span>Admin</span>
-                    </DropdownMenuSubTrigger>
-                    <DropdownMenuPortal>
-                      <DropdownMenuSubContent>
-                        <DropdownMenuItem asChild>
-                          <Link href="/admin/billing">
-                            <DollarSign className="h-4 w-4" />
-                            Billing Management
-                          </Link>
-                        </DropdownMenuItem>
-                      </DropdownMenuSubContent>
-                    </DropdownMenuPortal>
-                  </DropdownMenuSub>
-                )}
-                
-                <DropdownMenuItem onClick={() => setShowBillingModal(true)}>
-                  <Zap className="h-4 w-4" />
-                  Upgrade
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/settings/billing">
-                    <CreditCard className="h-4 w-4" />
-                    Billing
-                  </Link>
-                </DropdownMenuItem>
                 {(
                   <DropdownMenuItem asChild>
                     <Link href="/settings/credentials">
@@ -390,12 +359,7 @@ export function NavUserWithTeams({
         <NewTeamForm />
       </DialogContent>
 
-      {/* Billing Modal */}
-      <BillingModal
-        open={showBillingModal}
-        onOpenChange={setShowBillingModal}
-        returnUrl={typeof window !== 'undefined' ? window?.location?.href || '/' : '/'}
-      />
+      
     </Dialog>
   );
 }

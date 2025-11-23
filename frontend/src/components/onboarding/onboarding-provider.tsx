@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useOnboarding, usePostSubscriptionOnboarding } from '@/hooks/use-onboarding';
 import { NewOnboardingPage } from './new-onboarding-page';
 import { onboardingSteps } from './onboarding-config';
-import { useSubscription } from '@/hooks/react-query/subscriptions/use-subscriptions';
+import { useSubscriptionData } from '@/contexts/SubscriptionContext';
 import { useAuth } from '@/components/AuthProvider';
 
 interface OnboardingProviderProps {
@@ -16,7 +16,7 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
-  const { data: subscription } = useSubscription({ enabled: !!user });
+  const { data: subscription } = useSubscriptionData();
   const { shouldTriggerOnboarding, triggerPostSubscriptionOnboarding } = usePostSubscriptionOnboarding();
   const { isOpen, startOnboarding, completeOnboarding } = useOnboarding();
 

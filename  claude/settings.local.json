@@ -1,7 +1,0 @@
-{
-  "permissions": {
-    "allow": ["mcp__railway-mcp__deployment_list", "Bash(git rev-parse:*)"]
-  },
-  "enableAllProjectMcpServers": true,
-  "enabledMcpjsonServers": ["supabase", "railway-mcp"]
-}

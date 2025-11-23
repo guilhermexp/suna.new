@@ -59,6 +59,12 @@ def get_resolved_model_id(model_name: str) -> str:
 def is_anthropic_model(model_name: str) -> bool:
     """Check if model supports Anthropic prompt caching."""
     resolved_model = get_resolved_model_id(model_name).lower()
+
+    # Exclude GLM models that may use anthropic prefix but aren't real Anthropic models
+    # These models use API proxies that route through Anthropic-style endpoints
+    if "glm" in resolved_model:
+        return False
+
     return any(provider in resolved_model for provider in ['anthropic', 'claude', 'sonnet', 'haiku', 'opus'])
 
 def estimate_token_count(text: str, model: str = "claude-3-5-sonnet-20240620") -> int:

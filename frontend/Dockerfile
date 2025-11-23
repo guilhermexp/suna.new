@@ -89,5 +89,7 @@ EXPOSE 3000
 # server.js is created by next build from the standalone output
 # https://nextjs.org/docs/pages/api-reference/config/next-config-js/output
 ENV HOSTNAME="0.0.0.0"
+# Increase max HTTP header size to handle large Supabase cookies
+ENV NODE_OPTIONS="--max-http-header-size=32768"
 # The PORT will be set by Railway at runtime
 CMD ["node", "server.js"]

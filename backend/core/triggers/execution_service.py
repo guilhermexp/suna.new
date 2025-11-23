@@ -8,7 +8,8 @@ from core.services import redis
 from core.utils.logger import logger, structlog
 from core.utils.config import config, EnvMode
 from run_agent_background import run_agent_background
-from core.billing.billing_integration import billing_integration
+# Billing removed - model validation now done through model_manager
+from core.ai_models import model_manager as ai_model_manager
 from .trigger_service import TriggerEvent, TriggerResult
 
 
@@ -333,15 +334,13 @@ class AgentExecutor:
         account_id = agent_config.get('account_id')
         if not account_id:
             raise ValueError("Account ID not found in agent configuration")
-        
-        # Unified billing and model access check
-        can_proceed, error_message, context = await billing_integration.check_model_and_billing_access(
-            account_id, model_name
-        )
-        
-        if not can_proceed:
-            raise ValueError(f"Access denied: {error_message}")
-        
+
+        # Validate model if specified
+        if model_name:
+            is_valid, validation_error = ai_model_manager.validate_model(model_name)
+            if not is_valid:
+                raise ValueError(f"Invalid model: {validation_error}")
+
         agent_run = await client.table('agent_runs').insert({
             "thread_id": thread_id,
             "status": "running",

@@ -6,7 +6,7 @@ import {
   QueryClient,
   QueryClientProvider,
 } from '@tanstack/react-query';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+// import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { handleApiError } from '@/lib/error-handler';
 import { isLocalMode } from '@/lib/config';
 import { BillingError, AgentRunLimitError } from '@/lib/api';
@@ -60,9 +60,10 @@ export function ReactQueryProvider({
     <QueryClientProvider client={queryClient}>
       <HydrationBoundary state={dehydratedState}>
         {children}
-        {isLocal && (
+        {/* Devtools disabled for performance */}
+        {/* {isLocal && (
           <ReactQueryDevtools initialIsOpen={false} />
-        )}
+        )} */}
       </HydrationBoundary>
     </QueryClientProvider>
   );
